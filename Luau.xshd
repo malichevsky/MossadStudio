@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<SyntaxDefinition name="Luau" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+    <Color name="Comment" foreground="#6A9955" />
+    <Color name="String" foreground="#CE9178" />
+    <Color name="Number" foreground="#B5CEA8" />
+    <Color name="Punctuation" foreground="#D4D4D4" />
+    <Color name="Keyword" foreground="#569CD6" fontWeight="bold" />
+    <Color name="MethodCall" foreground="#DCDCAA" />
+    <Color name="Environment" foreground="#4EC9B0" />
+    
+    <RuleSet>
+        <Span color="Comment" multiline="true">
+            <Begin>--\[=*\[</Begin>
+            <End>\]=*\]</End>
+        </Span>
+        <Span color="Comment">
+            <Begin>--</Begin>
+        </Span>
+        
+        <Span color="String" multiline="true">
+            <Begin>'</Begin>
+            <End>'</End>
+            <RuleSet>
+                <Span begin="\\" end="." />
+            </RuleSet>
+        </Span>
+        <Span color="String" multiline="true">
+            <Begin>"</Begin>
+            <End>"</End>
+            <RuleSet>
+                <Span begin="\\" end="." />
+            </RuleSet>
+        </Span>
+        <Span color="String" multiline="true">
+            <Begin>\[=*\[</Begin>
+            <End>\]=*\]</End>
+        </Span>
+
+        <Keywords color="Keyword">
+            <Word>and</Word> <Word>break</Word> <Word>do</Word> <Word>else</Word> <Word>elseif</Word>
+            <Word>end</Word> <Word>false</Word> <Word>for</Word> <Word>function</Word> <Word>if</Word>
+            <Word>in</Word> <Word>local</Word> <Word>nil</Word> <Word>not</Word> <Word>or</Word>
+            <Word>repeat</Word> <Word>return</Word> <Word>then</Word> <Word>true</Word> <Word>until</Word>
+            <Word>while</Word> <Word>continue</Word>
+        </Keywords>
+        
+        <Keywords color="Environment">
+            <!-- Standard Lua / Roblox globals -->
+            <Word>game</Word> <Word>workspace</Word> <Word>script</Word> <Word>math</Word> <Word>string</Word>
+            <Word>table</Word> <Word>coroutine</Word> <Word>task</Word> <Word>debug</Word> <Word>os</Word> 
+            <Word>io</Word> <Word>package</Word> <Word>Drawing</Word> <Word>crypt</Word> <Word>_G</Word> <Word>_VERSION</Word>
+
+            <Word>tostring</Word> <Word>tonumber</Word> <Word>type</Word> <Word>print</Word> <Word>warn</Word> <Word>error</Word>
+            <Word>require</Word> <Word>pcall</Word> <Word>xpcall</Word> <Word>assert</Word> <Word>next</Word> 
+            <Word>pairs</Word> <Word>ipairs</Word> <Word>loadstring</Word> <Word>unpack</Word> <Word>rawequal</Word>
+            <Word>collectgarbage</Word> <Word>getmetatable</Word> <Word>setmetatable</Word> <Word>module</Word> <Word>rawset</Word>
+            <Word>newproxy</Word> <Word>select</Word> <Word>gcinfo</Word> <Word>rawget</Word> <Word>dofile</Word>
+            <Word>load</Word> <Word>loadfile</Word> <Word>setfenv</Word> <Word>getfenv</Word>
+            
+            <!-- Global / Exploit environment functions -->
+            <Word>getgenv</Word> <Word>getrenv</Word> <Word>getsenv</Word> <Word>getreg</Word>
+            <Word>getrawmetatable</Word> <Word>setrawmetatable</Word> <Word>setreadonly</Word> <Word>isreadonly</Word>
+            <Word>cloneref</Word> <Word>compareinstances</Word> <Word>checkcaller</Word> <Word>clonefunction</Word>
+            <Word>getcallingscript</Word> <Word>hookfunction</Word> <Word>isfunctionhooked</Word> <Word>restorefunction</Word>
+            <Word>iscclosure</Word> <Word>islclosure</Word> <Word>isexecutorclosure</Word> <Word>newcclosure</Word>
+            <Word>sirhurt_run_secure</Word> <Word>sirhurt_create_secure_function</Word> <Word>sirhurt_hub_scrun</Word>
+            <Word>cleardrawcache</Word> <Word>getrenderproperty</Word> <Word>isrenderobj</Word> <Word>setrenderproperty</Word>
+            <Word>readfile</Word> <Word>listfiles</Word> <Word>writefile</Word> <Word>makefolder</Word> <Word>appendfile</Word>
+            <Word>isfile</Word> <Word>isfolder</Word> <Word>delfile</Word> <Word>delfolder</Word>
+            <Word>mouse1click</Word> <Word>mouse1press</Word> <Word>mouse1release</Word> <Word>mouse2click</Word> <Word>mouse2press</Word> 
+            <Word>mouse2release</Word> <Word>mousemoveabs</Word> <Word>mousemoverel</Word> <Word>mousescroll</Word>
+            <Word>fireclickdetector</Word> <Word>fireproximityprompt</Word> <Word>firetouchinterest</Word> <Word>firesignal</Word>
+            <Word>getcallbackvalue</Word> <Word>getconnections</Word> <Word>getcustomasset</Word> <Word>gethiddenproperty</Word>
+            <Word>gethui</Word> <Word>getinstances</Word> <Word>getnilinstances</Word> <Word>isscriptable</Word>
+            <Word>sethiddenproperty</Word> <Word>setscriptable</Word> <Word>hookmetamethod</Word> <Word>getnamecallmethod</Word>
+            <Word>identifyexecutor</Word> <Word>lz4compress</Word> <Word>lz4decompress</Word> <Word>messagebox</Word>
+            <Word>queue_on_teleport</Word> <Word>request</Word> <Word>setclipboard</Word> <Word>setfpscap</Word> <Word>gethwid</Word> <Word>getgc</Word>
+            <Word>getloadedmodules</Word> <Word>getrunningscripts</Word> <Word>getscriptbytecode</Word> <Word>getscriptclosure</Word>
+            <Word>getscripthash</Word> <Word>getscripts</Word> <Word>getthreadidentity</Word> <Word>setthreadidentity</Word>
+            <Word>run_on_actor</Word> <Word>getactors</Word> <Word>getdeletedactors</Word>
+            <Word>emulateWave</Word> <Word>emulateJJSploit</Word> <Word>emulateSolara</Word>
+        </Keywords>
+        
+        <Rule color="MethodCall">\b[\d\w_]+(?=\s*\()|(?&lt;=\:)\b[\d\w_]+\b</Rule>
+        <Rule color="Number">\b0[xX][0-9a-fA-F]+|(\b\d+(\.[0-9]+)?|\.[0-9]+)([eE][+-]?[0-9]+)?</Rule>
+    </RuleSet>
+</SyntaxDefinition>

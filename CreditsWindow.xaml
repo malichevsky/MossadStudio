@@ -1,0 +1,63 @@
+<Window x:Class="MossadStudio.CreditsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Credits" Height="360" Width="400"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent"
+        FontFamily="Segoe UI" FontSize="12">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30" CornerRadius="0" GlassFrameThickness="0" ResizeBorderThickness="4" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
+
+    <Border Background="#121212" BorderBrush="#000000" BorderThickness="1">
+        <Border BorderBrush="#3ea0f0" BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Title Bar -->
+                <Grid Grid.Row="0" Background="#181818" WindowChrome.IsHitTestVisibleInChrome="False">
+                    <Image Source="pack://application:,,,/icon.ico" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,0" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" />
+                    
+                    <TextBlock Text="Credits" Foreground="#aaaaaa" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Normal"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" Foreground="#888888" Background="Transparent" BorderThickness="0" FontSize="10" Width="40" Click="Minimize_Click" Cursor="Hand" />
+                        <Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" Foreground="#888888" Background="Transparent" BorderThickness="0" FontSize="10" Width="40" Click="Close_Click" Cursor="Hand" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Grid.Row="0" BorderBrush="#000000" BorderThickness="0,0,0,1" />
+
+                <!-- Content Body -->
+                <Grid Grid.Row="1" Background="#1c1c1c" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="Mossad Studio" Foreground="#ffffff" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                        <TextBlock Text="Created with ❤️ for the community." Foreground="#aaaaaa" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                        
+                        <!-- Kelly -->
+                        <TextBlock Text="Kelly (dr.petro)" Foreground="#3ea0f0" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Lead Developer - Mossad Studio" Foreground="#aaaaaa" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+
+                        <!-- SirHurt Core -->
+                        <TextBlock Text="Spook (spook0479) &amp; woffle (sirhurtian)" Foreground="#ffffff" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="SirHurt Core Components (Injector &amp; DLL)" Foreground="#888888" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+
+                        <!-- gap -->
+                        <TextBlock Text="gap (pagatilecure)" Foreground="#ffffff" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="SirHurt.Cleaner.CLI Engine" Foreground="#888888" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+
+                        <!-- xDodox -->
+                        <TextBlock Text="xDodox_ (xdodox_)" Foreground="#ffffff" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="SirHurt API Backend Architecture" Foreground="#888888" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+
+                        <!-- RScripts -->
+                        <TextBlock Text="Rscripts.net" Foreground="#ffffff" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Script Hub API Infrastructure" Foreground="#888888" FontSize="12" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Border>
+</Window>

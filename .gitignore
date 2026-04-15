@@ -1,0 +1,23 @@
+# .NET / Visual Studio
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+.vs/
+*.user
+*.userprefs
+*.suo
+*.orig
+*.patch
+*.log
+*.sqlite
+
+# Mossad Studio Environment Exceptions
+MossadSettings.json
+Bootstrapper_log.txt
+sirh_debug_log.dat
+update.bat
+*.zip
+*.tmp
+
+# Mac/OSX
+.DS_Store
