@@ -22,3 +22,13 @@ This custom UI was built with .NET 10 and modern libraries to make it simpler an
 2. Create a folder and place MossadStudio.exe in it.
 3. Run the executable.
 4. Enjoy!!
+
+## To-do
+
+- [ ] Toggle to enable Monaco editor and back to AvalonEdit
+- [ ] As well to implement Monaco editor with Luau LSP, will work under MS WebView2 since CEF is heavy.
+- [ ] Ability to load custom .d.luau files (and convert to .xshd when AvalonEdit is enabled)
+- [ ] Remove FPS unlocker since it is no longer revelant
+- [ ] Add ability to encrypt scripts with `sirhurt_secure` library and execute them.
+- [ ] Get rid of Discord RPC, no longer revelant
+- [ ] Add ability to show SirHurt injection console as a separate window (by default the window is hidden and all output is redirected to the output tab)

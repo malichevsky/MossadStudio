@@ -21,3 +21,6 @@ update.bat
 
 # Mac/OSX
 .DS_Store
+
+#Rscripts outputs
+rscripts.json
