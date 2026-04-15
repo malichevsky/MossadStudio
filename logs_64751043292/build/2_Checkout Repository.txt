@@ -1,0 +1,75 @@
+﻿2026-04-15T14:56:52.3037394Z ##[group]Run actions/checkout@v4
+2026-04-15T14:56:52.3038930Z with:
+2026-04-15T14:56:52.3039891Z   repository: malichevsky/MossadStudio
+2026-04-15T14:56:52.3041125Z   token: ***
+2026-04-15T14:56:52.3041816Z   ssh-strict: true
+2026-04-15T14:56:52.3042530Z   ssh-user: git
+2026-04-15T14:56:52.3043253Z   persist-credentials: true
+2026-04-15T14:56:52.3044074Z   clean: true
+2026-04-15T14:56:52.3044809Z   sparse-checkout-cone-mode: true
+2026-04-15T14:56:52.3045691Z   fetch-depth: 1
+2026-04-15T14:56:52.3046407Z   fetch-tags: false
+2026-04-15T14:56:52.3047154Z   show-progress: true
+2026-04-15T14:56:52.3047890Z   lfs: false
+2026-04-15T14:56:52.3048558Z   submodules: false
+2026-04-15T14:56:52.3049333Z   set-safe-directory: true
+2026-04-15T14:56:52.3050350Z ##[endgroup]
+2026-04-15T14:56:52.4688963Z Syncing repository: malichevsky/MossadStudio
+2026-04-15T14:56:52.4691803Z ##[group]Getting Git version info
+2026-04-15T14:56:52.4692922Z Working directory is 'D:\a\MossadStudio\MossadStudio'
+2026-04-15T14:56:52.5458697Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-04-15T14:56:52.8918926Z git version 2.53.0.windows.2
+2026-04-15T14:56:52.8973495Z ##[endgroup]
+2026-04-15T14:56:52.8993521Z Temporarily overriding HOME='D:\a\_temp\770c19e1-ac37-46af-af81-6b60f7089ce6' before making global git config changes
+2026-04-15T14:56:52.8995698Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-15T14:56:52.9005123Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\MossadStudio\MossadStudio
+2026-04-15T14:56:52.9614631Z Deleting the contents of 'D:\a\MossadStudio\MossadStudio'
+2026-04-15T14:56:52.9621193Z ##[group]Initializing the repository
+2026-04-15T14:56:52.9631450Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\MossadStudio\MossadStudio
+2026-04-15T14:56:53.0418673Z Initialized empty Git repository in D:/a/MossadStudio/MossadStudio/.git/
+2026-04-15T14:56:53.0465410Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/malichevsky/MossadStudio
+2026-04-15T14:56:53.0951499Z ##[endgroup]
+2026-04-15T14:56:53.0952807Z ##[group]Disabling automatic garbage collection
+2026-04-15T14:56:53.0961236Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-04-15T14:56:53.1241720Z ##[endgroup]
+2026-04-15T14:56:53.1242875Z ##[group]Setting up auth
+2026-04-15T14:56:53.1255803Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-04-15T14:56:53.1545662Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-04-15T14:56:55.2126041Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-15T14:56:55.2440272Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-04-15T14:56:55.8396411Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-15T14:56:55.8713022Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-04-15T14:56:56.9954579Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-04-15T14:56:57.0338522Z ##[endgroup]
+2026-04-15T14:56:57.0339831Z ##[group]Fetching the repository
+2026-04-15T14:56:57.0357545Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +816f62b0a3479fea40f4654c629a61a9c825e8e3:refs/tags/v1.0.0
+2026-04-15T14:57:02.5766177Z From https://github.com/malichevsky/MossadStudio
+2026-04-15T14:57:02.5769530Z  * [new ref]         816f62b0a3479fea40f4654c629a61a9c825e8e3 -> v1.0.0
+2026-04-15T14:57:02.6523182Z ##[endgroup]
+2026-04-15T14:57:02.6523830Z ##[group]Determining the checkout info
+2026-04-15T14:57:02.6526365Z ##[endgroup]
+2026-04-15T14:57:02.6538619Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-04-15T14:57:02.7111174Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-04-15T14:57:02.7416861Z ##[group]Checking out the ref
+2026-04-15T14:57:02.7428758Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/tags/v1.0.0
+2026-04-15T14:57:02.8310491Z Note: switching to 'refs/tags/v1.0.0'.
+2026-04-15T14:57:02.8311152Z 
+2026-04-15T14:57:02.8311562Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-04-15T14:57:02.8312207Z changes and commit them, and you can discard any commits you make in this
+2026-04-15T14:57:02.8313739Z state without impacting any branches by switching back to a branch.
+2026-04-15T14:57:02.8314288Z 
+2026-04-15T14:57:02.8314637Z If you want to create a new branch to retain commits you create, you may
+2026-04-15T14:57:02.8315356Z do so (now or later) by using -c with the switch command. Example:
+2026-04-15T14:57:02.8315719Z 
+2026-04-15T14:57:02.8315874Z   git switch -c <new-branch-name>
+2026-04-15T14:57:02.8316126Z 
+2026-04-15T14:57:02.8316270Z Or undo this operation with:
+2026-04-15T14:57:02.8316560Z 
+2026-04-15T14:57:02.8316687Z   git switch -
+2026-04-15T14:57:02.8316850Z 
+2026-04-15T14:57:02.8317162Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-04-15T14:57:02.8317669Z 
+2026-04-15T14:57:02.8355505Z HEAD is now at 816f62b v1.0.0: Initial Release
+2026-04-15T14:57:02.8556236Z ##[endgroup]
+2026-04-15T14:57:02.9333605Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-04-15T14:57:02.9611082Z 816f62b0a3479fea40f4654c629a61a9c825e8e3

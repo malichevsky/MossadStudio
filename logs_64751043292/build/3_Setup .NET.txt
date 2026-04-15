@@ -1,0 +1,21 @@
+﻿2026-04-15T14:57:03.0001399Z ##[group]Run actions/setup-dotnet@v4
+2026-04-15T14:57:03.0001747Z with:
+2026-04-15T14:57:03.0001923Z   dotnet-version: 10.0.x
+2026-04-15T14:57:03.0002135Z   cache: false
+2026-04-15T14:57:03.0002295Z ##[endgroup]
+2026-04-15T14:57:03.4313897Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Runtime dotnet -Channel LTS
+2026-04-15T14:57:14.6864755Z dotnet-install: Downloaded file https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.6/dotnet-runtime-10.0.6-win-x64.zip size is 36882482 bytes.
+2026-04-15T14:57:14.6867919Z dotnet-install: Either downloaded or local package size can not be measured. One of them may be corrupted.
+2026-04-15T14:57:14.6890171Z dotnet-install: Extracting the archive.
+2026-04-15T14:57:15.6594599Z dotnet-install: Note that the script does not ensure your Windows version is supported during the installation.
+2026-04-15T14:57:15.6600079Z dotnet-install: To check the list of supported versions, go to https://learn.microsoft.com/dotnet/core/install/windows#supported-versions
+2026-04-15T14:57:15.6606869Z dotnet-install: Installed version is 10.0.6
+2026-04-15T14:57:15.6613755Z dotnet-install: Installation finished
+2026-04-15T14:57:15.9669476Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Channel 10.0
+2026-04-15T14:57:21.1661981Z dotnet-install: Downloaded file https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.202/dotnet-sdk-10.0.202-win-x64.zip size is 304456718 bytes.
+2026-04-15T14:57:21.1667848Z dotnet-install: Either downloaded or local package size can not be measured. One of them may be corrupted.
+2026-04-15T14:57:21.1690068Z dotnet-install: Extracting the archive.
+2026-04-15T14:57:40.9887304Z dotnet-install: Note that the script does not ensure your Windows version is supported during the installation.
+2026-04-15T14:57:40.9891038Z dotnet-install: To check the list of supported versions, go to https://learn.microsoft.com/dotnet/core/install/windows#supported-versions
+2026-04-15T14:57:40.9895895Z dotnet-install: Installed version is 10.0.202
+2026-04-15T14:57:40.9900517Z dotnet-install: Installation finished

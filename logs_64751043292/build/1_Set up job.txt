@@ -1,0 +1,32 @@
+﻿2026-04-15T14:56:50.7547218Z Current runner version: '2.333.1'
+2026-04-15T14:56:50.7615075Z ##[group]Runner Image Provisioner
+2026-04-15T14:56:50.7615867Z Hosted Compute Agent
+2026-04-15T14:56:50.7616395Z Version: 20260213.493
+2026-04-15T14:56:50.7616916Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-04-15T14:56:50.7617568Z Build Date: 2026-02-13T00:28:41Z
+2026-04-15T14:56:50.7618177Z Worker ID: {aab34b10-09ef-4bbd-bb78-d417470a952d}
+2026-04-15T14:56:50.7618815Z Azure Region: eastus2
+2026-04-15T14:56:50.7619264Z ##[endgroup]
+2026-04-15T14:56:50.7620456Z ##[group]Operating System
+2026-04-15T14:56:50.7621012Z Microsoft Windows Server 2025
+2026-04-15T14:56:50.7621483Z 10.0.26100
+2026-04-15T14:56:50.7621943Z Datacenter
+2026-04-15T14:56:50.7622341Z ##[endgroup]
+2026-04-15T14:56:50.7622771Z ##[group]Runner Image
+2026-04-15T14:56:50.7623237Z Image: windows-2025
+2026-04-15T14:56:50.7623698Z Version: 20260413.84.1
+2026-04-15T14:56:50.7624614Z Included Software: https://github.com/actions/runner-images/blob/win25/20260413.84/images/windows/Windows2025-Readme.md
+2026-04-15T14:56:50.7626371Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20260413.84
+2026-04-15T14:56:50.7627222Z ##[endgroup]
+2026-04-15T14:56:50.7628229Z ##[group]GITHUB_TOKEN Permissions
+2026-04-15T14:56:50.7629940Z Contents: write
+2026-04-15T14:56:50.7630413Z Metadata: read
+2026-04-15T14:56:50.7630879Z ##[endgroup]
+2026-04-15T14:56:50.7633408Z Secret source: Actions
+2026-04-15T14:56:50.7634575Z Prepare workflow directory
+2026-04-15T14:56:50.8058711Z Prepare all required actions
+2026-04-15T14:56:50.8097804Z Getting action download info
+2026-04-15T14:56:51.1698721Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-04-15T14:56:51.2908622Z Download action repository 'actions/setup-dotnet@v4' (SHA:67a3573c9a986a3f9c594539f4ab511d57bb3ce9)
+2026-04-15T14:56:51.7017036Z Download action repository 'softprops/action-gh-release@v2' (SHA:3bb12739c298aeb8a4eeaf626c5b8d85266b0e65)
+2026-04-15T14:56:52.1326380Z Complete job name: build

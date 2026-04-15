@@ -1,0 +1,157 @@
+﻿2026-04-15T14:56:50.7587857Z Current runner version: '2.333.1'
+2026-04-15T14:56:50.7615152Z ##[group]Runner Image Provisioner
+2026-04-15T14:56:50.7615871Z Hosted Compute Agent
+2026-04-15T14:56:50.7616398Z Version: 20260213.493
+2026-04-15T14:56:50.7616919Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-04-15T14:56:50.7617572Z Build Date: 2026-02-13T00:28:41Z
+2026-04-15T14:56:50.7618180Z Worker ID: {aab34b10-09ef-4bbd-bb78-d417470a952d}
+2026-04-15T14:56:50.7618818Z Azure Region: eastus2
+2026-04-15T14:56:50.7619267Z ##[endgroup]
+2026-04-15T14:56:50.7620462Z ##[group]Operating System
+2026-04-15T14:56:50.7621016Z Microsoft Windows Server 2025
+2026-04-15T14:56:50.7621487Z 10.0.26100
+2026-04-15T14:56:50.7621948Z Datacenter
+2026-04-15T14:56:50.7622344Z ##[endgroup]
+2026-04-15T14:56:50.7622773Z ##[group]Runner Image
+2026-04-15T14:56:50.7623240Z Image: windows-2025
+2026-04-15T14:56:50.7623702Z Version: 20260413.84.1
+2026-04-15T14:56:50.7625024Z Included Software: https://github.com/actions/runner-images/blob/win25/20260413.84/images/windows/Windows2025-Readme.md
+2026-04-15T14:56:50.7626377Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20260413.84
+2026-04-15T14:56:50.7627225Z ##[endgroup]
+2026-04-15T14:56:50.7628233Z ##[group]GITHUB_TOKEN Permissions
+2026-04-15T14:56:50.7629955Z Contents: write
+2026-04-15T14:56:50.7630468Z Metadata: read
+2026-04-15T14:56:50.7630882Z ##[endgroup]
+2026-04-15T14:56:50.7633704Z Secret source: Actions
+2026-04-15T14:56:50.7634582Z Prepare workflow directory
+2026-04-15T14:56:50.8058747Z Prepare all required actions
+2026-04-15T14:56:50.8097837Z Getting action download info
+2026-04-15T14:56:51.1698761Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-04-15T14:56:51.2908676Z Download action repository 'actions/setup-dotnet@v4' (SHA:67a3573c9a986a3f9c594539f4ab511d57bb3ce9)
+2026-04-15T14:56:51.7017100Z Download action repository 'softprops/action-gh-release@v2' (SHA:3bb12739c298aeb8a4eeaf626c5b8d85266b0e65)
+2026-04-15T14:56:52.1326415Z Complete job name: build
+2026-04-15T14:56:52.3037448Z ##[group]Run actions/checkout@v4
+2026-04-15T14:56:52.3038937Z with:
+2026-04-15T14:56:52.3039901Z   repository: malichevsky/MossadStudio
+2026-04-15T14:56:52.3041129Z   token: ***
+2026-04-15T14:56:52.3041820Z   ssh-strict: true
+2026-04-15T14:56:52.3042535Z   ssh-user: git
+2026-04-15T14:56:52.3043258Z   persist-credentials: true
+2026-04-15T14:56:52.3044079Z   clean: true
+2026-04-15T14:56:52.3044820Z   sparse-checkout-cone-mode: true
+2026-04-15T14:56:52.3045696Z   fetch-depth: 1
+2026-04-15T14:56:52.3046418Z   fetch-tags: false
+2026-04-15T14:56:52.3047159Z   show-progress: true
+2026-04-15T14:56:52.3047895Z   lfs: false
+2026-04-15T14:56:52.3048563Z   submodules: false
+2026-04-15T14:56:52.3049337Z   set-safe-directory: true
+2026-04-15T14:56:52.3050361Z ##[endgroup]
+2026-04-15T14:56:52.4689030Z Syncing repository: malichevsky/MossadStudio
+2026-04-15T14:56:52.4691829Z ##[group]Getting Git version info
+2026-04-15T14:56:52.4692970Z Working directory is 'D:\a\MossadStudio\MossadStudio'
+2026-04-15T14:56:52.5458773Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-04-15T14:56:52.8919015Z git version 2.53.0.windows.2
+2026-04-15T14:56:52.8973535Z ##[endgroup]
+2026-04-15T14:56:52.8993556Z Temporarily overriding HOME='D:\a\_temp\770c19e1-ac37-46af-af81-6b60f7089ce6' before making global git config changes
+2026-04-15T14:56:52.8995706Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-15T14:56:52.9005164Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\MossadStudio\MossadStudio
+2026-04-15T14:56:52.9614712Z Deleting the contents of 'D:\a\MossadStudio\MossadStudio'
+2026-04-15T14:56:52.9621218Z ##[group]Initializing the repository
+2026-04-15T14:56:52.9631491Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\MossadStudio\MossadStudio
+2026-04-15T14:56:53.0418844Z Initialized empty Git repository in D:/a/MossadStudio/MossadStudio/.git/
+2026-04-15T14:56:53.0465501Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/malichevsky/MossadStudio
+2026-04-15T14:56:53.0951550Z ##[endgroup]
+2026-04-15T14:56:53.0952816Z ##[group]Disabling automatic garbage collection
+2026-04-15T14:56:53.0961271Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-04-15T14:56:53.1241766Z ##[endgroup]
+2026-04-15T14:56:53.1242881Z ##[group]Setting up auth
+2026-04-15T14:56:53.1255836Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-04-15T14:56:53.1545719Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-04-15T14:56:55.2126127Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-15T14:56:55.2440397Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-04-15T14:56:55.8396486Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-15T14:56:55.8713080Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-04-15T14:56:56.9954654Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-04-15T14:56:57.0338588Z ##[endgroup]
+2026-04-15T14:56:57.0339854Z ##[group]Fetching the repository
+2026-04-15T14:56:57.0357582Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +816f62b0a3479fea40f4654c629a61a9c825e8e3:refs/tags/v1.0.0
+2026-04-15T14:57:02.5768663Z From https://github.com/malichevsky/MossadStudio
+2026-04-15T14:57:02.5769534Z  * [new ref]         816f62b0a3479fea40f4654c629a61a9c825e8e3 -> v1.0.0
+2026-04-15T14:57:02.6523253Z ##[endgroup]
+2026-04-15T14:57:02.6523837Z ##[group]Determining the checkout info
+2026-04-15T14:57:02.6526384Z ##[endgroup]
+2026-04-15T14:57:02.6538655Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-04-15T14:57:02.7111234Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-04-15T14:57:02.7416893Z ##[group]Checking out the ref
+2026-04-15T14:57:02.7428780Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/tags/v1.0.0
+2026-04-15T14:57:02.8310537Z Note: switching to 'refs/tags/v1.0.0'.
+2026-04-15T14:57:02.8311158Z 
+2026-04-15T14:57:02.8311567Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-04-15T14:57:02.8312211Z changes and commit them, and you can discard any commits you make in this
+2026-04-15T14:57:02.8313853Z state without impacting any branches by switching back to a branch.
+2026-04-15T14:57:02.8314293Z 
+2026-04-15T14:57:02.8314642Z If you want to create a new branch to retain commits you create, you may
+2026-04-15T14:57:02.8315361Z do so (now or later) by using -c with the switch command. Example:
+2026-04-15T14:57:02.8315723Z 
+2026-04-15T14:57:02.8315878Z   git switch -c <new-branch-name>
+2026-04-15T14:57:02.8316129Z 
+2026-04-15T14:57:02.8316274Z Or undo this operation with:
+2026-04-15T14:57:02.8316563Z 
+2026-04-15T14:57:02.8316690Z   git switch -
+2026-04-15T14:57:02.8316854Z 
+2026-04-15T14:57:02.8317167Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-04-15T14:57:02.8317673Z 
+2026-04-15T14:57:02.8355523Z HEAD is now at 816f62b v1.0.0: Initial Release
+2026-04-15T14:57:02.8556259Z ##[endgroup]
+2026-04-15T14:57:02.9333650Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-04-15T14:57:02.9611118Z 816f62b0a3479fea40f4654c629a61a9c825e8e3
+2026-04-15T14:57:03.0001423Z ##[group]Run actions/setup-dotnet@v4
+2026-04-15T14:57:03.0001750Z with:
+2026-04-15T14:57:03.0001926Z   dotnet-version: 10.0.x
+2026-04-15T14:57:03.0002137Z   cache: false
+2026-04-15T14:57:03.0002297Z ##[endgroup]
+2026-04-15T14:57:03.4313947Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Runtime dotnet -Channel LTS
+2026-04-15T14:57:14.6864808Z dotnet-install: Downloaded file https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.6/dotnet-runtime-10.0.6-win-x64.zip size is 36882482 bytes.
+2026-04-15T14:57:14.6867936Z dotnet-install: Either downloaded or local package size can not be measured. One of them may be corrupted.
+2026-04-15T14:57:14.6890188Z dotnet-install: Extracting the archive.
+2026-04-15T14:57:15.6594797Z dotnet-install: Note that the script does not ensure your Windows version is supported during the installation.
+2026-04-15T14:57:15.6600103Z dotnet-install: To check the list of supported versions, go to https://learn.microsoft.com/dotnet/core/install/windows#supported-versions
+2026-04-15T14:57:15.6606886Z dotnet-install: Installed version is 10.0.6
+2026-04-15T14:57:15.6613770Z dotnet-install: Installation finished
+2026-04-15T14:57:15.9669533Z [command]"C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -Sta -NoProfile -NonInteractive -ExecutionPolicy Unrestricted -Command & 'D:\a\_actions\actions\setup-dotnet\v4\externals\install-dotnet.ps1' -SkipNonVersionedFiles -Channel 10.0
+2026-04-15T14:57:21.1662033Z dotnet-install: Downloaded file https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.202/dotnet-sdk-10.0.202-win-x64.zip size is 304456718 bytes.
+2026-04-15T14:57:21.1667877Z dotnet-install: Either downloaded or local package size can not be measured. One of them may be corrupted.
+2026-04-15T14:57:21.1690084Z dotnet-install: Extracting the archive.
+2026-04-15T14:57:40.9887392Z dotnet-install: Note that the script does not ensure your Windows version is supported during the installation.
+2026-04-15T14:57:40.9891049Z dotnet-install: To check the list of supported versions, go to https://learn.microsoft.com/dotnet/core/install/windows#supported-versions
+2026-04-15T14:57:40.9895911Z dotnet-install: Installed version is 10.0.202
+2026-04-15T14:57:40.9900535Z dotnet-install: Installation finished
+2026-04-15T14:57:41.0572642Z ##[group]Run cd MossadStudio
+2026-04-15T14:57:41.0573010Z [36;1mcd MossadStudio[0m
+2026-04-15T14:57:41.0573638Z [36;1mdotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true[0m
+2026-04-15T14:57:41.0637363Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-04-15T14:57:41.0637719Z env:
+2026-04-15T14:57:41.0637909Z   DOTNET_ROOT: C:\Program Files\dotnet
+2026-04-15T14:57:41.0638157Z ##[endgroup]
+2026-04-15T14:57:41.8357595Z [31;1mSet-Location: [0mD:\a\_temp\790503fb-3be7-4981-937b-63a8daf0a508.ps1:2[0m
+2026-04-15T14:57:41.8358355Z [31;1m[0m[36;1mLine |[0m
+2026-04-15T14:57:41.8358803Z [31;1m[0m[36;1m[36;1m   2 | [0m [36;1mcd MossadStudio[0m
+2026-04-15T14:57:41.8359249Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~~~~~~~~~~[0m
+2026-04-15T14:57:41.8360159Z [31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCannot find path 'D:\a\MossadStudio\MossadStudio\MossadStudio' because it does not exist.[0m
+2026-04-15T14:57:41.8883812Z ##[error]Process completed with exit code 1.
+2026-04-15T14:57:41.9158736Z Post job cleanup.
+2026-04-15T14:57:42.1477233Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-04-15T14:57:42.1761550Z git version 2.53.0.windows.2
+2026-04-15T14:57:42.1841467Z Temporarily overriding HOME='D:\a\_temp\baa9d763-befd-48a4-91d8-94366d2fb8bf' before making global git config changes
+2026-04-15T14:57:42.1842642Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-15T14:57:42.1853132Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\MossadStudio\MossadStudio
+2026-04-15T14:57:42.2167241Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-04-15T14:57:42.2468461Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-04-15T14:57:42.7789937Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-15T14:57:42.8039756Z http.https://github.com/.extraheader
+2026-04-15T14:57:42.8087322Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-04-15T14:57:42.8403097Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-04-15T14:57:43.3648088Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-15T14:57:43.3947442Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-04-15T14:57:43.9154594Z Cleaning up orphan processes
+2026-04-15T14:57:43.9189563Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-dotnet@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

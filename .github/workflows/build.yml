@@ -22,12 +22,11 @@ jobs:
 
       - name: Compile Standalone Executable
         run: |
-          cd MossadStudio
           dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
 
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: MossadStudio/bin/Release/net10.0-windows/win-x64/publish/MossadStudio.exe
+          files: bin/Release/net10.0-windows/win-x64/publish/MossadStudio.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
