@@ -47,7 +47,15 @@ namespace MossadStudio
             {
                 using var client = new HttpClient();
                 client.DefaultRequestHeaders.Add("User-Agent", "MossadStudioUpdater");
-                string json = await client.GetStringAsync("https://api.github.com/repos/malichevsky/MossadStudio/releases/latest");
+                string url = "https://api.github.com/repos/malichevsky/MossadStudio/releases/latest";
+                using var resp = await client.GetAsync(url);
+                string json = await resp.Content.ReadAsStringAsync();
+
+                if (SettingsManager.Config.HiddenFlags.VerboseLogging)
+                {
+                    Log($"[Verbose] HTTP {(int)resp.StatusCode} ({json.Length} chars) for {url}");
+                }
+
                 using JsonDocument doc = JsonDocument.Parse(json);
                 string? tagName = doc.RootElement.GetProperty("tag_name").GetString();
                 

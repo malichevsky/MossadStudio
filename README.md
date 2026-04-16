@@ -8,11 +8,12 @@ This custom UI was built with .NET 10 and modern libraries to make it simpler an
 
 ## Features
 
-- AvalonEdit with updated Luau syntax highlighting
+- AvalonEdit and Monaco editor with updated Luau syntax highlighting with ability to load custom .d.luau files (and convert to .xshd when AvalonEdit is enabled)
 - Output tab to see all actions coming from MossadStudio and SirHurt
 - Script Hub powered by Rscripts.net
 - Built-in SirHurt Cleaner
-- Discord RPC and sirhurt_secure obfuscation toggle (Work In Progress, to be implemented in the future)
+- Flags for experienced users (if you are not - don't touch it)
+- ~~sirhurt_secure encryption toggle~~ (Work In Progress, to be implemented in the future)
 - Bootstrapper to stay updated on the latest version of UI and SirHurt
 - ...and more!
 
@@ -25,10 +26,10 @@ This custom UI was built with .NET 10 and modern libraries to make it simpler an
 
 ## To-do
 
-- [ ] Toggle to enable Monaco editor and back to AvalonEdit
-- [ ] As well to implement Monaco editor with Luau LSP, will work under MS WebView2 since CEF is heavy.
-- [ ] Ability to load custom .d.luau files (and convert to .xshd when AvalonEdit is enabled)
-- [ ] Remove FPS unlocker since it is no longer revelant
+- [x] Toggle to enable Monaco editor and back to AvalonEdit
+- [x] As well to implement Monaco editor with Luau LSP, will work under MS WebView2 since CEF is heavy.
+- [x] Ability to load custom .d.luau files (and convert to .xshd when AvalonEdit is enabled)
+- [x] Remove FPS unlocker since it is no longer revelant
 - [ ] Add ability to encrypt scripts with `sirhurt_secure` library and execute them.
-- [ ] Get rid of Discord RPC, no longer revelant
+- [x] Get rid of Discord RPC, no longer revelant
 - [ ] Add ability to show SirHurt injection console as a separate window (by default the window is hidden and all output is redirected to the output tab)

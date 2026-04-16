@@ -1,9 +1,9 @@
-# ── .NET / MSBuild ──────────────────────────────────────────────────────────
+# .NET / MSBuild 
 [Bb]in/
 [Oo]bj/
 [Oo]ut/
 
-# ── Visual Studio / Rider ───────────────────────────────────────────────────
+# Visual Studio / Rider 
 .vs/
 .idea/
 *.user
@@ -12,14 +12,14 @@
 *.orig
 *.patch
 
-# ── Build artifacts ─────────────────────────────────────────────────────────
+# Build artifacts 
 *.pdb
 *.zip
 *.tmp
 *.log
 *.sqlite
 
-# ── Mossad Studio — runtime-generated folders (user data, never commit) ─────
+# Mossad Studio — runtime-generated folders (user data, never commit) 
 
 # WebView2 browser cache (created at runtime next to exe or in bin\WebView2\)
 *.WebView2/
@@ -48,9 +48,9 @@ Bootstrapper_log.txt
 # Custom .d.luau definition files loaded by user at runtime
 *.d.luau
 
-# ── macOS ────────────────────────────────────────────────────────────────────
+# macOS 
 .DS_Store
 
-# ── Legacy / misc ────────────────────────────────────────────────────────────
+# Legacy / misc 
 rscripts.json
 MossadSettings.json

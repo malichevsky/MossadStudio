@@ -42,6 +42,7 @@ namespace MossadStudio.Services
 
         public static async Task<bool> DownloadCoreAsync(Action<string> logCallback, bool forceRedownload = false)
         {
+            bool suspectedBlock = false;
             try
             {
                 bool verbose = SettingsManager.Config.HiddenFlags.VerboseLogging;
@@ -72,33 +73,43 @@ namespace MossadStudio.Services
 
                 if (!SettingsManager.Config.HiddenFlags.SkipSirHurtUpdateCheck)
                 {
-                logCallback("Fetching LIVE Roblox version hash...");
-                string rbText = await client.GetStringAsync("https://clientsettingscdn.roblox.com/v2/client-version/WindowsPlayer");
-                if (verbose) logCallback($"[Verbose] Roblox version response: {rbText.Length} chars");
-                using JsonDocument rbDoc = JsonDocument.Parse(rbText);
-                string robloxLive = rbDoc.RootElement.GetProperty("clientVersionUpload").GetString();
-                RobloxLiveVersion = robloxLive ?? "Unknown";
-                logCallback($"Live Roblox Version: {robloxLive}");
+                    logCallback("Fetching LIVE Roblox version hash...");
+                    string rbUrl = "https://clientsettingscdn.roblox.com/v2/client-version/WindowsPlayer";
+                    using var rbResp = await client.GetAsync(rbUrl);
+                    string rbText = await rbResp.Content.ReadAsStringAsync();
+                    
+                    if (verbose) logCallback($"[Verbose] HTTP {(int)rbResp.StatusCode} ({rbText.Length} chars) for {rbUrl}");
+                    if (!rbResp.IsSuccessStatusCode) suspectedBlock |= DetectAndLogBlock(rbResp, logCallback);
 
-                logCallback("Checking SirHurt API status...");
-                string shText = await client.GetStringAsync("https://sirhurt.net/status/fetch.php?exploit=SirHurt%20V5");
-                if (verbose) logCallback($"[Verbose] SirHurt status response: {shText.Length} chars");
-                using JsonDocument shDoc = JsonDocument.Parse(shText);
-                var shNode = shDoc.RootElement[0].GetProperty("SirHurt V5");
-                shExploitVersion = shNode.GetProperty("exploit_version").GetString();
-                string shRobloxVersion = shNode.GetProperty("roblox_version").GetString();
-                bool shUpdated = shNode.GetProperty("updated").GetBoolean();
+                    using JsonDocument rbDoc = JsonDocument.Parse(rbText);
+                    string robloxLive = rbDoc.RootElement.GetProperty("clientVersionUpload").GetString();
+                    RobloxLiveVersion = robloxLive ?? "Unknown";
+                    logCallback($"Live Roblox Version: {robloxLive}");
 
-                logCallback($"SirHurt Supports: {shRobloxVersion}");
+                    logCallback("Checking SirHurt API status...");
+                    string shUrl = "https://sirhurt.net/status/fetch.php?exploit=SirHurt%20V5";
+                    using var shResp = await client.GetAsync(shUrl);
+                    string shText = await shResp.Content.ReadAsStringAsync();
 
-                if (!shUpdated || shRobloxVersion != robloxLive)
-                {
-                    logCallback("WARNING: SirHurt is currently UNPATCHED for the live Roblox version!");
-                }
-                else
-                {
-                    logCallback("SirHurt and Roblox are synced.");
-                }
+                    if (verbose) logCallback($"[Verbose] HTTP {(int)shResp.StatusCode} ({shText.Length} chars) for {shUrl}");
+                    if (!shResp.IsSuccessStatusCode) suspectedBlock |= DetectAndLogBlock(shResp, logCallback);
+
+                    using JsonDocument shDoc = JsonDocument.Parse(shText);
+                    var shNode = shDoc.RootElement[0].GetProperty("SirHurt V5");
+                    shExploitVersion = shNode.GetProperty("exploit_version").GetString();
+                    string shRobloxVersion = shNode.GetProperty("roblox_version").GetString();
+                    bool shUpdated = shNode.GetProperty("updated").GetBoolean();
+
+                    logCallback($"SirHurt Supports: {shRobloxVersion}");
+
+                    if (!shUpdated || shRobloxVersion != robloxLive)
+                    {
+                        logCallback("WARNING: SirHurt is currently UNPATCHED for the live Roblox version!");
+                    }
+                    else
+                    {
+                        logCallback("SirHurt and Roblox are synced.");
+                    }
                 }
                 string versionFile = Path.Combine(CoreDir, "version.txt");
                 string shdllPath = Path.Combine(SirHurtDatDir, "shdllname.dat");
@@ -126,8 +137,13 @@ namespace MossadStudio.Services
                 }
 
                 logCallback("Downloading SirHurt Core archive (this may take a moment)...");
-                string hexResponse = await client.GetStringAsync("https://sirhurt.net/asshurt/update/v5/ProtectFile.php?customversion=LIVE&file=sirhurt.zip");
-                if (verbose) logCallback($"[Verbose] Archive hex response: {hexResponse.Length} chars");
+                string archiveUrl = "https://sirhurt.net/asshurt/update/v5/ProtectFile.php?customversion=LIVE&file=sirhurt.zip";
+                using var archResp = await client.GetAsync(archiveUrl);
+                string hexResponse = await archResp.Content.ReadAsStringAsync();
+                
+                if (verbose) logCallback($"[Verbose] HTTP {(int)archResp.StatusCode} ({hexResponse.Length} chars) for {archiveUrl}");
+                if (!archResp.IsSuccessStatusCode) suspectedBlock |= DetectAndLogBlock(archResp, logCallback);
+
                 byte[] zipBytes = DecodeSirHurtZip(hexResponse);
                 if (verbose) logCallback($"[Verbose] Decoded ZIP size: {zipBytes.Length / 1024} KB");
 
@@ -162,11 +178,21 @@ namespace MossadStudio.Services
                 {
                     try
                     {
-                        string dllUrlResponse = await client.GetStringAsync("https://sirhurt.net/asshurt/update/v5/fetch_version.php?customversion=LIVE");
-                        string dllUrl = dllUrlResponse.Trim();
+                        string verUrl = "https://sirhurt.net/asshurt/update/v5/fetch_version.php?customversion=LIVE";
+                        using var verResp = await client.GetAsync(verUrl);
+                        string dllUrl = (await verResp.Content.ReadAsStringAsync()).Trim();
+
+                        if (verbose) logCallback($"[Verbose] HTTP {(int)verResp.StatusCode} ({dllUrl.Length} chars) for {verUrl}");
+                        if (!verResp.IsSuccessStatusCode) suspectedBlock |= DetectAndLogBlock(verResp, logCallback);
+
                         if (string.IsNullOrEmpty(dllUrl)) throw new Exception("DLL URL empty.");
                         
-                        dllBytes = await client.GetByteArrayAsync(dllUrl);
+                        using var dllResp = await client.GetAsync(dllUrl);
+                        dllBytes = await dllResp.Content.ReadAsByteArrayAsync();
+
+                        if (verbose) logCallback($"[Verbose] HTTP {(int)dllResp.StatusCode} ({dllBytes.Length} bytes) for {dllUrl}");
+                        if (!dllResp.IsSuccessStatusCode) suspectedBlock |= DetectAndLogBlock(dllResp, logCallback);
+
                         if (dllBytes.Length < 1024) throw new Exception("DLL too small.");
                         
                         break; // Success
@@ -199,9 +225,34 @@ namespace MossadStudio.Services
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Failed to download SirHurt core:\n{ex.Message}", "API Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                string errorMessage = ex.Message;
+                if (ex is HttpRequestException || ex is TaskCanceledException || suspectedBlock)
+                {
+                    logCallback("NETWORK ERROR: Connection failed, timed out, or block detected.");
+                    logCallback("ADVICE: If you are on a restricted network (University/Work), Roblox may be blocked.");
+                    logCallback("ADVICE: Try using a VPN or Cloudflare WARP to bypass network restrictions.");
+                    
+                    if (!errorMessage.Contains("ADVICE"))
+                    {
+                        errorMessage += "\n\nADVICE: If you are on a restricted network (University/Work), Roblox may be blocked. Try using a VPN or Cloudflare WARP.";
+                    }
+                }
+
+                System.Windows.MessageBox.Show($"Failed to download SirHurt core:\n{errorMessage}", "API Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 Debug.WriteLine($"Failed to download SirHurt core: {ex.Message}");
                 logCallback($"API Check Failed: {ex.Message}");
+            }
+            return false;
+        }
+
+        private static bool DetectAndLogBlock(HttpResponseMessage response, Action<string> logCallback)
+        {
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden || 
+                response.StatusCode == System.Net.HttpStatusCode.ProxyAuthenticationRequired)
+            {
+                logCallback("SUSPECTED BLOCK: The server returned a 403 Forbidden or Proxy error.");
+                logCallback("ADVICE: This network likely blocks Roblox/SirHurt. Please use a VPN or Cloudflare WARP.");
+                return true;
             }
             return false;
         }
