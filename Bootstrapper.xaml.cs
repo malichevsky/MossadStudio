@@ -37,6 +37,12 @@ namespace MossadStudio
 
         private async Task<bool> CheckForUpdatesAsync()
         {
+            if (SettingsManager.Config.HiddenFlags.SkipStudioUpdateCheck)
+            {
+                Log("[Hidden Flag] SkipStudioUpdateCheck active — GitHub update check skipped.");
+                return true;
+            }
+
             try
             {
                 using var client = new HttpClient();
@@ -45,7 +51,7 @@ namespace MossadStudio
                 using JsonDocument doc = JsonDocument.Parse(json);
                 string? tagName = doc.RootElement.GetProperty("tag_name").GetString();
                 
-                Version appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 0);
+                Version appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 1, 0);
                 string currentTag = $"v{appVersion.ToString(3)}";
                 
                 if (!string.IsNullOrEmpty(tagName) && tagName != currentTag)
@@ -111,6 +117,26 @@ del ""%~f0""
             // Clear old logs
             try { System.IO.File.WriteAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Bootstrapper_log.txt"), ""); } catch {}
 
+            // Hidden flags: combo check + general warning
+            if (!HiddenFlagsWarning.CheckAndPrompt())
+            {
+                Application.Current.Shutdown();
+                return;
+            }
+
+            // SkipBootstrapper: jump straight to MainWindow
+            if (SettingsManager.Config.HiddenFlags.SkipBootstrapper)
+            {
+                Log("[Hidden Flag] SkipBootstrapper active — bypassing core download and all checks.");
+                Log("WARNING: SirHurt files have NOT been verified. Injection may fail.");
+                await Task.Delay(500);
+
+                MainWindow mainWindow = new MainWindow();
+                mainWindow.Show();
+                this.Close();
+                return;
+            }
+
             Log("Checking if Mossad Studio is up-to-date...");
             bool shouldContinue = await CheckForUpdatesAsync();
             if (!shouldContinue) return;
@@ -118,11 +144,15 @@ del ""%~f0""
             // Minimal artificial delay for polish
             await Task.Delay(500);
 
-            // Execute the API download logic
+            // Execute the API download logic (honour ForceRedownload flag)
+            bool forceRedownload = SettingsManager.Config.HiddenFlags.ForceRedownload;
+            if (forceRedownload)
+                Log("[Hidden Flag] ForceRedownload active — ignoring version cache.");
+
             bool success = await SirHurtAPI.DownloadCoreAsync(msg => 
             {
                 Dispatcher.Invoke(() => Log(msg));
-            });
+            }, forceRedownload: forceRedownload);
 
             _stopwatch.Stop();
             _timer.Stop();

@@ -1,6 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Diagnostics;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -11,27 +15,35 @@ using System.Xml;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 using MossadStudio.Services;
 
 namespace MossadStudio;
 
 public partial class MainWindow : Window
 {
-    private IHighlightingDefinition _luauHighlighting;
-    private TextEditor _outputEditor;
+    private IHighlightingDefinition? _luauHighlighting;
+    private TextEditor _outputEditor = null!;
     private int _tabCounter = 1;
-    private FileSystemWatcher _sirHurtWatcher;
+    private FileSystemWatcher _sirHurtWatcher = null!;
     private long _lastLogPosition = 0;
-    private DispatcherTimer _robloxProcessTimer;
-    private SettingsWindow _settingsWindow;
+    private DispatcherTimer _robloxProcessTimer = null!;
+    private SettingsWindow _settingsWindow = null!;
+
+    // True while we're waiting for SaveTabsAsync() to finish before shutdown
+    private bool _isClosing = false;
+
+    private bool _monacoMode => SettingsManager.Config.MonacoEditor;
 
     public MainWindow()
     {
         InitializeComponent();
-        
-        this.Activated += Window_Activated;
+
+        this.Activated   += Window_Activated;
         this.Deactivated += Window_Deactivated;
-        
+        this.Closing     += Window_Closing;
+
         LoadSyntax();
         InitializeTabs();
         LoadScripts();
@@ -39,390 +51,467 @@ public partial class MainWindow : Window
         SetupProcessChecker();
     }
 
-    private void LoadSyntax()
+    // Syntax loading
+    private void LoadSyntax(string? augmentedXshd = null)
     {
         try
         {
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            // The embedded resource name includes the default namespace
-            string resourceName = "MossadStudio.Luau.xshd";
-            
-            using (var s = assembly.GetManifestResourceStream(resourceName))
+            if (augmentedXshd != null)
             {
-                if (s != null)
-                {
-                    using (var reader = new XmlTextReader(s))
-                    {
-                        _luauHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-                    }
-                }
+                using var sr = new System.IO.StringReader(augmentedXshd);
+                using var xr = XmlReader.Create(sr);
+                _luauHighlighting = HighlightingLoader.Load(xr, HighlightingManager.Instance);
+                return;
             }
-        } catch {}
+
+            var asm = System.Reflection.Assembly.GetExecutingAssembly();
+            using var s = asm.GetManifestResourceStream("MossadStudio.Luau.xshd");
+            if (s != null)
+            {
+                using var reader = new XmlTextReader(s);
+                _luauHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+            }
+        }
+        catch { }
     }
 
+    // Tab initialisation
     private void InitializeTabs()
     {
-        // 1. Output Tab
-        _outputEditor = CreateEditor(true);
-        var outputTab = CreateTabItem("Output", _outputEditor, false);
-        EditorTabs.Items.Add(outputTab);
+        _outputEditor = CreateAvalonEditor(readOnly: true);
+        EditorTabs.Items.Add(CreateTabItem("Output", _outputEditor, closable: false));
 
-        // 2. Initial Script Tab
-        AddScriptTab($"Script{_tabCounter++}.lua");
-
-        EditorTabs.SelectedIndex = 1; // Select Script1.lua
-    }
-
-    private TextEditor CreateEditor(bool readOnly)
-    {
-        var editor = new TextEditor
+        // Restore previously saved tabs
+        var saved = TabPersistenceService.Load();
+        if (saved.Count > 0)
         {
-            ShowLineNumbers = true,
-            Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#cccccc")),
-            Background = Brushes.Transparent,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 13,
-            BorderThickness = new Thickness(0),
-            LineNumbersForeground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#888888")),
-            SyntaxHighlighting = _luauHighlighting,
-            IsReadOnly = readOnly,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
-        };
-        if (readOnly)
-        {
-            editor.ShowLineNumbers = false;
-            editor.SyntaxHighlighting = null;
-            editor.Foreground = Brushes.White;
+            foreach (var td in saved)
+            {
+                AddScriptTab(td.Title, td.Content);
+                // Keep _tabCounter ahead of restored names like "Script3.lua"
+                if (td.Title.StartsWith("Script", StringComparison.OrdinalIgnoreCase) &&
+                    td.Title.EndsWith(".lua", StringComparison.OrdinalIgnoreCase))
+                {
+                    string mid = td.Title[6..^4];
+                    if (int.TryParse(mid, out int n))
+                        _tabCounter = Math.Max(_tabCounter, n + 1);
+                }
+            }
         }
-        return editor;
+        else
+        {
+            AddScriptTab($"Script{_tabCounter++}.lua");
+        }
+
+        EditorTabs.SelectedIndex = 1;
     }
 
-    private TabItem CreateTabItem(string title, TextEditor editor, bool closable = true)
+    // Editor factories
+    private TextEditor CreateAvalonEditor(bool readOnly)
     {
-        var tab = new TabItem { Content = editor };
-        
-        var headerPanel = new Grid { Width = 90 }; // ~100px total width with padding
-        headerPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        
-        var titleText = new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, TextTrimming = TextTrimming.CharacterEllipsis };
-        headerPanel.Children.Add(titleText);
+        return new TextEditor
+        {
+            ShowLineNumbers          = !readOnly,
+            Foreground               = readOnly
+                                         ? Brushes.White
+                                         : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#cccccc")),
+            Background               = Brushes.Transparent,
+            FontFamily               = new FontFamily("Consolas"),
+            FontSize                 = 13,
+            BorderThickness          = new Thickness(0),
+            LineNumbersForeground    = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#888888")),
+            SyntaxHighlighting       = readOnly ? null : _luauHighlighting,
+            IsReadOnly               = readOnly,
+            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility   = System.Windows.Controls.ScrollBarVisibility.Auto
+        };
+    }
+
+    // Tab helpers
+    private TabItem CreateTabItem(string title, UIElement content, bool closable = true)
+    {
+        var tab = new TabItem { Content = content };
+
+        var header = new Grid { Width = 90 };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var titleText = new TextBlock
+        {
+            Text                = title,
+            VerticalAlignment   = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            TextTrimming        = TextTrimming.CharacterEllipsis
+        };
+        header.Children.Add(titleText);
 
         if (closable)
         {
-            headerPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            var closeText = new TextBlock { Text = "X", Foreground = Brushes.Gray, FontSize = 10, Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
-            closeText.MouseEnter += (s, e) => closeText.Foreground = Brushes.White;
-            closeText.MouseLeave += (s, e) => closeText.Foreground = Brushes.Gray;
-            closeText.PreviewMouseLeftButtonDown += (s, e) => 
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var x = new TextBlock
+            {
+                Text                = "X",
+                Foreground          = Brushes.Gray,
+                FontSize            = 10,
+                Cursor              = Cursors.Hand,
+                VerticalAlignment   = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            x.MouseEnter += (_, _) => x.Foreground = Brushes.White;
+            x.MouseLeave += (_, _) => x.Foreground = Brushes.Gray;
+            x.PreviewMouseLeftButtonDown += (_, e) =>
             {
                 e.Handled = true;
                 EditorTabs.Items.Remove(tab);
+                _ = SaveTabsAsync();   // Persist remaining tabs after close
             };
-            Grid.SetColumn(closeText, 1);
-            headerPanel.Children.Add(closeText);
+            Grid.SetColumn(x, 1);
+            header.Children.Add(x);
         }
 
-        tab.Header = headerPanel;
+        tab.Header = header;
         return tab;
     }
 
+    private string GetTabTitle(TabItem tab)
+    {
+        if (tab.Header is Grid g)
+            foreach (UIElement child in g.Children)
+                if (child is TextBlock tb) return tb.Text;
+        return "Script";
+    }
+
+    private WebView2? FindWebView2(TabItem tab)
+    {
+        if (tab.Content is Grid g)
+            foreach (UIElement child in g.Children)
+                if (child is WebView2 wv) return wv;
+        return null;
+    }
+
+    // Public tab API
     public void AddScriptTab(string title, string content = "")
     {
-        var editor = CreateEditor(false);
-        editor.Text = content;
-        var newTab = CreateTabItem(title, editor, true);
-        
-        EditorTabs.Items.Add(newTab);
-        EditorTabs.SelectedItem = newTab;
-    }
-
-    private void AddTabButton_Click(object sender, MouseButtonEventArgs e)
-    {
-        AddScriptTab($"Script{_tabCounter++}.lua");
-    }
-
-    private void SetupProcessChecker()
-    {
-        _robloxProcessTimer = new DispatcherTimer
+        if (!_monacoMode)
         {
-            Interval = TimeSpan.FromSeconds(2)
-        };
-        _robloxProcessTimer.Tick += (s, e) => 
-        {
-            if (!SirHurtAPI.IsRobloxRunning())
-            {
-                if (SirHurtAPI.IsInjected || BtnInject.Content.ToString() == "INJECTED")
-                {
-                    SirHurtAPI.IsInjected = false;
-                    BtnInject.Content = "INJECT";
-                    BtnInject.IsEnabled = true;
-                }
-            }
-        };
-        _robloxProcessTimer.Start();
-    }
-
-    private void SetupLogTailer()
-    {
-        string bsLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Bootstrapper_log.txt");
-        if (File.Exists(bsLog))
-        {
-            _outputEditor.AppendText(File.ReadAllText(bsLog));
+            var editor = CreateAvalonEditor(readOnly: false);
+            editor.Text = content;
+            EditorTabs.Items.Add(CreateTabItem(title, editor, closable: true));
+            EditorTabs.SelectedItem = EditorTabs.Items[^1];
         }
-
-        string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "sirhurt", "sirhui", "sirh_debug_log.dat");
-        if (File.Exists(logPath))
+        else
         {
-             using (var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-             {
-                 _lastLogPosition = fs.Length;
-             }
+            // Fire-and-forget; the tab appears immediately with a loading state
+            _ = AddMonacoScriptTabAsync(title, content);
         }
-        else 
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(logPath));
-            File.WriteAllText(logPath, "");
-        }
-
-        _sirHurtWatcher = new FileSystemWatcher
-        {
-            Path = Path.GetDirectoryName(logPath),
-            Filter = Path.GetFileName(logPath),
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
-        };
-        _sirHurtWatcher.Changed += OnLogChanged;
-        _sirHurtWatcher.EnableRaisingEvents = true;
     }
 
-    private void OnLogChanged(object sender, FileSystemEventArgs e)
+    /// <summary>
+    /// Creates a Monaco tab where the WebView2 is added to the visual tree
+    /// BEFORE EnsureCoreWebView2Async is called (required on some environments).
+    /// </summary>
+    private async Task AddMonacoScriptTabAsync(string title, string content)
     {
+        // 1. Build the container with a loading label
+        var bg    = (Color)ColorConverter.ConvertFromString("#222222");
+        var grid  = new Grid { Background = new SolidColorBrush(bg) };
+        var label = new TextBlock
+        {
+            Text                = "Initialising Monaco…",
+            Foreground          = new SolidColorBrush(Color.FromArgb(0xFF, 0x55, 0x55, 0x55)),
+            FontFamily          = new FontFamily("Segoe UI"),
+            FontSize            = 13,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment   = VerticalAlignment.Center
+        };
+        var wv = new WebView2();
+
+        grid.Children.Add(wv);
+        grid.Children.Add(label);
+
+        // 2. Add to visual tree NOW so EnsureCoreWebView2Async can work
+        var tab = CreateTabItem(title, grid, closable: true);
+        EditorTabs.Items.Add(tab);
+        EditorTabs.SelectedItem = tab;
+
         try
         {
-            using (var fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var reader = new StreamReader(fs))
+            // 3. Initialise WebView2 with user-data folder inside bin\ (avoids
+            //    the "MossadStudio.exe.WebView2" clutter in the root directory)
+            var env = await CoreWebView2Environment.CreateAsync(
+                browserExecutableFolder: null,
+                userDataFolder: AppPaths.WebView2DataDir,
+                options: null);
+            await wv.EnsureCoreWebView2Async(env);
+
+            // 4. Map virtual host → Monaco folder next to exe
+            string monacoDir = MonacoExtractor.GetExtractedPath();
+            wv.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                "monaco.local", monacoDir,
+                CoreWebView2HostResourceAccessKind.Allow);
+
+            // 5. Wait for Monaco JS to fire "monacoReady"
+            var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            EventHandler<CoreWebView2WebMessageReceivedEventArgs>? msgHandler = null;
+            msgHandler = (_, e) =>
             {
-                if (fs.Length < _lastLogPosition)
-                    _lastLogPosition = 0; // File was cleared
-
-                fs.Seek(_lastLogPosition, SeekOrigin.Begin);
-                string newContent = reader.ReadToEnd();
-                _lastLogPosition = fs.Length;
-
-                if (!string.IsNullOrEmpty(newContent))
+                if (e.TryGetWebMessageAsString() == "monacoReady")
                 {
-                    Dispatcher.Invoke(() => {
-                        var lines = newContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                        foreach (var l in lines) _outputEditor.AppendText($"[SirHurt] {l}\n");
-                        _outputEditor.ScrollToEnd();
-                    });
+                    wv.CoreWebView2.WebMessageReceived -= msgHandler;
+                    ready.TrySetResult(true);
                 }
-            }
-        } catch { } // Catch ReadWrite locked race condition
-    }
-
-    private void LoadScripts()
-    {
-        ScriptsTreeView.Items.Clear();
-        
-        // Setup empty-space ContextMenu for the TreeView wrapper
-        if (ScriptsTreeView.ContextMenu == null)
-        {
-            ScriptsTreeView.ContextMenu = new ContextMenu();
-            var genericRefresh = new MenuItem { Header = "Refresh List" };
-            genericRefresh.Click += (s, e) => LoadScripts();
-            ScriptsTreeView.ContextMenu.Items.Add(genericRefresh);
-        }
-
-        if (Directory.Exists(SirHurtAPI.ScriptsDir))
-        {
-            PopulateTreeView(SirHurtAPI.ScriptsDir, ScriptsTreeView.Items);
-        }
-    }
-
-    private ContextMenu CreateScriptContextMenu(string targetPath, bool isFile)
-    {
-        var menu = new ContextMenu();
-        
-        var openItem = new MenuItem { Header = isFile ? "Open Script" : "Open Folder" };
-        openItem.Click += (s, e) => {
-            if (isFile) AddScriptTab(Path.GetFileName(targetPath), File.ReadAllText(targetPath));
-            else Process.Start("explorer.exe", targetPath);
-            e.Handled = true;
-        };
-        menu.Items.Add(openItem);
-
-        if (isFile)
-        {
-            var executeItem = new MenuItem { Header = "Execute File" };
-            executeItem.Click += (s, e) => {
-                if (SirHurtAPI.IsInjected) SirHurtAPI.Execute(File.ReadAllText(targetPath));
-                e.Handled = true;
             };
-            menu.Items.Add(executeItem);
+            wv.CoreWebView2.WebMessageReceived += msgHandler;
+
+            wv.CoreWebView2.Navigate("https://monaco.local/editor.html");
+
+            // 20-second safety timeout
+            var winner = await Task.WhenAny(ready.Task, Task.Delay(20_000));
+            if (winner != ready.Task)
+                throw new TimeoutException("Monaco editor did not respond within 20 seconds.");
+
+            // 6. Set initial content
+            string textJson = JsonSerializer.Serialize(content);
+            await wv.CoreWebView2.ExecuteScriptAsync($"window.monacoAPI.setText({textJson})");
+
+            // 7. Inject any loaded .d.luau schema
+            if (DluauParser.CurrentSchema.Types.Count > 0 || DluauParser.CurrentSchema.Globals.Count > 0)
+            {
+                string schemaJson = JsonSerializer.Serialize(DluauParser.CurrentSchema);
+                await wv.CoreWebView2.ExecuteScriptAsync(
+                    $"window.monacoAPI.addDluauCompletions({schemaJson})");
+            }
+
+            label.Visibility = Visibility.Collapsed;
         }
-
-        var renameItem = new MenuItem { Header = isFile ? "Rename File" : "Rename Folder" };
-        renameItem.Click += (s, e) => {
-            var prompt = new PromptWindow("Rename", $"Enter new name for {(isFile ? "file" : "folder")}:", Path.GetFileName(targetPath)) { Owner = this };
-            if (prompt.ShowDialog() == true && !string.IsNullOrWhiteSpace(prompt.ResponseText))
-            {
-                try
-                {
-                    string newPath = Path.Combine(Path.GetDirectoryName(targetPath)!, prompt.ResponseText);
-                    if (isFile) File.Move(targetPath, newPath);
-                    else Directory.Move(targetPath, newPath);
-                    LoadScripts();
-                }
-                catch (Exception ex) { MessageBox.Show("Failed to rename target: " + ex.Message, "System Error", MessageBoxButton.OK, MessageBoxImage.Warning); }
-            }
-            e.Handled = true;
-        };
-        menu.Items.Add(renameItem);
-
-        var deleteItem = new MenuItem { Header = isFile ? "Delete File" : "Delete Folder" };
-        deleteItem.Click += (s, e) => {
-            if (MessageBox.Show($"Are you sure you want to permanently delete the {(isFile ? "file" : "folder")} '{Path.GetFileName(targetPath)}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    if (isFile) File.Delete(targetPath);
-                    else Directory.Delete(targetPath, true);
-                    LoadScripts();
-                }
-                catch (Exception ex) { MessageBox.Show("Failed to delete target: " + ex.Message, "System Error", MessageBoxButton.OK, MessageBoxImage.Warning); }
-            }
-            e.Handled = true;
-        };
-        menu.Items.Add(deleteItem);
-
-        var sep = new Separator();
-        sep.Background = (SolidColorBrush)new BrushConverter().ConvertFromString("#333333");
-        menu.Items.Add(sep);
-        
-        var refreshItem = new MenuItem { Header = "Refresh List" };
-        refreshItem.Click += (s, e) => { LoadScripts(); e.Handled = true; };
-        menu.Items.Add(refreshItem);
-        
-        return menu;
+        catch (Exception ex)
+        {
+            label.Text      = $"Monaco error:\n{ex.Message}";
+            label.Foreground = new SolidColorBrush(Colors.OrangeRed);
+        }
     }
 
-    private void PopulateTreeView(string directoryPath, ItemCollection parentItems)
+    // Safe Monaco text reader
+    private static async Task<string> GetMonacoTextAsync(WebView2 wv)
     {
-        foreach (var dir in Directory.GetDirectories(directoryPath))
-        {
-            var dirInfo = new DirectoryInfo(dir);
-            var item = new TreeViewItem { Header = dirInfo.Name, Tag = dir, Foreground = Brushes.LightGray };
-            item.ContextMenu = CreateScriptContextMenu(dir, false);
-            PopulateTreeView(dir, item.Items);
-            parentItems.Add(item);
-        }
+        // encodeURIComponent converts ALL text → safe ASCII (%XX sequences).
+        // getText() || '' guards against null/undefined.
+        string jr = await wv.CoreWebView2.ExecuteScriptAsync(
+            "encodeURIComponent(window.monacoAPI.getText() || '')");
 
-        foreach (var file in Directory.GetFiles(directoryPath))
-        {
-            var fileInfo = new FileInfo(file);
-            if (fileInfo.Extension.ToLower() == ".lua" || fileInfo.Extension.ToLower() == ".luau" || fileInfo.Extension.ToLower() == ".txt")
-            {
-                var item = new TreeViewItem { Header = fileInfo.Name, Tag = file, Foreground = Brushes.LightGray };
-                item.ContextMenu = CreateScriptContextMenu(file, true);
-                parentItems.Add(item);
-            }
-        }
+        // ExecuteScriptAsync wraps the JS string result in JSON double-quotes.
+        // Strip them manually — no Deserialize involved.
+        if (jr.StartsWith('"') && jr.EndsWith('"') && jr.Length >= 2)
+            jr = jr[1..^1];
+
+        return Uri.UnescapeDataString(jr);
     }
 
-    private void ScriptsTreeView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    private async Task<string?> GetActiveScriptTextAsync()
     {
-        if (ScriptsTreeView.SelectedItem is TreeViewItem selectedItem && selectedItem.Tag is string path)
+        if (EditorTabs.SelectedItem is not TabItem tab) return null;
+
+        if (tab.Content is TextEditor te && !te.IsReadOnly)
+            return te.Text;
+
+        var wv = FindWebView2(tab);
+        if (wv?.CoreWebView2 == null) return null;
+
+        return await GetMonacoTextAsync(wv);
+    }
+
+    private async Task SetActiveScriptTextAsync(string text)
+    {
+        if (EditorTabs.SelectedItem is not TabItem tab) return;
+
+        if (tab.Content is TextEditor te && !te.IsReadOnly)
         {
-            if (File.Exists(path))
+            te.Text = text;
+            return;
+        }
+
+        var wv = FindWebView2(tab);
+        if (wv?.CoreWebView2 == null) return;
+        await wv.CoreWebView2.ExecuteScriptAsync(
+            $"window.monacoAPI.setText({JsonSerializer.Serialize(text)})");
+    }
+
+    // Tab persistence
+    private async Task SaveTabsAsync()
+    {
+        var list = new List<TabData>();
+
+        foreach (TabItem t in EditorTabs.Items)
+        {
+            // Output tab — skip
+            if (t.Content is TextEditor te && te.IsReadOnly) continue;
+
+            string title   = GetTabTitle(t);
+            string content = "";
+
+            if (t.Content is TextEditor editor)
             {
-                AddScriptTab(Path.GetFileName(path), File.ReadAllText(path));
+                content = editor.Text;
             }
+            else
+            {
+                var wv = FindWebView2(t);
+                if (wv?.CoreWebView2 != null)
+                {
+                    try { content = await GetMonacoTextAsync(wv); }
+                    catch { content = ""; }
+                }
+            }
+
+            list.Add(new TabData { Title = title, Content = content });
+        }
+
+        TabPersistenceService.Save(list);
+    }
+
+    // Editor mode switching
+    public async Task SwitchEditorModeAsync(bool useMonaco)
+    {
+        // Collect all script tab data
+        var tabs = new List<(string Title, string Text)>();
+        foreach (TabItem t in EditorTabs.Items)
+        {
+            if (t.Content is TextEditor te && te.IsReadOnly) continue;
+
+            string title   = GetTabTitle(t);
+            string content = "";
+
+            if (t.Content is TextEditor editor)
+            {
+                content = editor.Text;
+            }
+            else
+            {
+                var wv = FindWebView2(t);
+                if (wv?.CoreWebView2 != null)
+                {
+                    try { content = await GetMonacoTextAsync(wv); }
+                    catch { content = ""; }
+                }
+            }
+            tabs.Add((title, content));
+        }
+
+        // Rebuild tabs
+        EditorTabs.Items.Clear();
+        EditorTabs.Items.Add(CreateTabItem("Output", _outputEditor, closable: false));
+
+        if (tabs.Count == 0) tabs.Add(($"Script{_tabCounter++}.lua", ""));
+
+        foreach (var (title, text) in tabs)
+            AddScriptTab(title, text);
+
+        EditorTabs.SelectedIndex = EditorTabs.Items.Count > 1 ? 1 : 0;
+    }
+
+    /// <summary>Push .d.luau schema to all open Monaco tabs and rebuild AvalonEdit syntax.</summary>
+    public async Task ApplyDluauCompletionsAsync(LuauTypeSchema schema)
+    {
+        string schemaJson = JsonSerializer.Serialize(schema);
+
+        foreach (TabItem t in EditorTabs.Items)
+        {
+            var wv = FindWebView2(t);
+            if (wv?.CoreWebView2 != null)
+                await wv.CoreWebView2.ExecuteScriptAsync(
+                    $"window.monacoAPI.addDluauCompletions({schemaJson})");
+        }
+
+        string? augmented = DluauParser.BuildAugmentedXshd(schema);
+        if (augmented != null)
+        {
+            LoadSyntax(augmented);
+            foreach (TabItem t in EditorTabs.Items)
+                if (t.Content is TextEditor te && !te.IsReadOnly)
+                    te.SyntaxHighlighting = _luauHighlighting;
         }
     }
 
-    public TextEditor GetActiveEditor()
+    // Tab button (+)
+    private void AddTabButton_Click(object sender, MouseButtonEventArgs e)
+        => AddScriptTab($"Script{_tabCounter++}.lua");
+
+    // GetActiveEditor is kept for undo/redo/find-replace (AvalonEdit only)
+    public TextEditor? GetActiveEditor()
     {
         if (EditorTabs.SelectedItem is TabItem tab && tab.Content is TextEditor editor)
             return editor;
         return null;
     }
 
-    private void BtnExecute_Click(object sender, RoutedEventArgs e)
+    // Bottom action buttons
+    private async void BtnExecute_Click(object sender, RoutedEventArgs e)
     {
         if (!SirHurtAPI.IsRobloxRunning())
         {
             SirHurtAPI.IsInjected = false;
-            if (BtnInject.Content.ToString() == "INJECTED")
-            {
-                BtnInject.Content = "INJECT";
-                BtnInject.IsEnabled = true;
-            }
-            MessageBox.Show("RobloxPlayerBeta.exe is not found and is not likely injected.", "Mossad Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+            BtnInject.Content   = "INJECT";
+            BtnInject.IsEnabled = true;
+            MessageBox.Show("RobloxPlayerBeta.exe not found.", "Mossad Studio",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (!SirHurtAPI.IsInjected)
         {
-            MessageBox.Show("SirHurt is not injected! To execute a script, please press the INJECT button first.", "Mossad Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("SirHurt is not injected! Press INJECT first.", "Mossad Studio",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var editor = GetActiveEditor();
-        if (editor != null && !editor.IsReadOnly)
-             SirHurtAPI.Execute(editor.Text);
+        string? text = await GetActiveScriptTextAsync();
+        if (!string.IsNullOrWhiteSpace(text))
+            SirHurtAPI.Execute(text);
     }
 
-    private void BtnClear_Click(object sender, RoutedEventArgs e)
-    {
-        var editor = GetActiveEditor();
-        if (editor != null && !editor.IsReadOnly)
-             editor.Text = string.Empty;
-    }
+    private async void BtnClear_Click(object sender, RoutedEventArgs e)
+        => await SetActiveScriptTextAsync("");
 
     private void BtnOpenFile_Click(object sender, RoutedEventArgs e)
     {
-        var openFileDialog = new Microsoft.Win32.OpenFileDialog
+        var dlg = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Lua Scripts (*.lua;*.luau;*.txt)|*.lua;*.luau;*.txt|All files (*.*)|*.*",
+            Filter           = "Lua Scripts (*.lua;*.luau;*.txt)|*.lua;*.luau;*.txt|All files (*.*)|*.*",
             InitialDirectory = Path.GetFullPath(SirHurtAPI.ScriptsDir)
         };
-        if (openFileDialog.ShowDialog() == true)
-        {
-            AddScriptTab(Path.GetFileName(openFileDialog.FileName), File.ReadAllText(openFileDialog.FileName));
-        }
+        if (dlg.ShowDialog() == true)
+            AddScriptTab(Path.GetFileName(dlg.FileName), File.ReadAllText(dlg.FileName));
     }
 
-    private void BtnSaveFile_Click(object sender, RoutedEventArgs e)
+    private async void BtnSaveFile_Click(object sender, RoutedEventArgs e)
     {
-        var editor = GetActiveEditor();
-        if (editor != null && !editor.IsReadOnly)
+        string? text = await GetActiveScriptTextAsync();
+        if (text == null) return;
+
+        var dlg = new Microsoft.Win32.SaveFileDialog
         {
-            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
-            {
-                Filter = "Lua Scripts (*.lua;*.luau;*.txt)|*.lua;*.luau;*.txt|All files (*.*)|*.*",
-                InitialDirectory = Path.GetFullPath(SirHurtAPI.ScriptsDir)
-            };
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                File.WriteAllText(saveFileDialog.FileName, editor.Text);
-                MessageBox.Show("Script successfully saved!", "Mossad Studio", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
+            Filter           = "Lua Scripts (*.lua;*.luau;*.txt)|*.lua;*.luau;*.txt|All files (*.*)|*.*",
+            InitialDirectory = Path.GetFullPath(SirHurtAPI.ScriptsDir)
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            File.WriteAllText(dlg.FileName, text);
+            MessageBox.Show("Script saved!", "Mossad Studio",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
     private async void BtnInject_Click(object sender, RoutedEventArgs e)
     {
-        if (BtnInject.Content.ToString() == "INJECTING" || BtnInject.Content.ToString() == "INJECTED")
-            return;
+        if (BtnInject.Content.ToString() is "INJECTING" or "INJECTED") return;
 
         if (!SirHurtAPI.IsRobloxRunning())
         {
-            MessageBox.Show("RobloxPlayerBeta.exe is not present. Please open your Roblox client first.", "Mossad Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("RobloxPlayerBeta.exe not found. Open Roblox first.", "Mossad Studio",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        BtnInject.Content = "INJECTING";
+        BtnInject.Content   = "INJECTING";
         BtnInject.IsEnabled = false;
 
         try
@@ -430,62 +519,45 @@ public partial class MainWindow : Window
             bool success = await SirHurtAPI.InjectAsync();
             if (success)
             {
-                BtnInject.Content = "INJECTED";
+                BtnInject.Content     = "INJECTED";
                 SirHurtAPI.IsInjected = true;
-
-                // Handle Auto-Execute if active
-                if (SettingsManager.Config.AutoExecute)
-                {
-                    await Task.Delay(500); // Give injection a half second to stabilize
-                    if (Directory.Exists(SirHurtAPI.AutoexecDir))
-                    {
-                        foreach (var file in Directory.GetFiles(SirHurtAPI.AutoexecDir))
-                        {
-                            if (file.EndsWith(".lua") || file.EndsWith(".txt") || file.EndsWith(".luau"))
-                            {
-                                SirHurtAPI.Execute(File.ReadAllText(file));
-                                await Task.Delay(200); // Stagger executions
-                            }
-                        }
-                    }
-                }
             }
             else
             {
-                BtnInject.Content = "INJECT";
+                BtnInject.Content   = "INJECT";
                 BtnInject.IsEnabled = true;
             }
         }
         catch (FileNotFoundException ex)
         {
-            MessageBox.Show(ex.Message, "Injector Error: Missing Files", MessageBoxButton.OK, MessageBoxImage.Warning);
-            BtnInject.Content = "INJECT";
+            MessageBox.Show(ex.Message, "Injector Error: Missing Files",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            BtnInject.Content   = "INJECT";
             BtnInject.IsEnabled = true;
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to inject: {ex.Message}", "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            BtnInject.Content = "INJECT";
+            MessageBox.Show($"Failed to inject: {ex.Message}", "Fatal Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            BtnInject.Content   = "INJECT";
             BtnInject.IsEnabled = true;
         }
     }
+
+    // ── Settings panel ────────────────────────────────────────────────────────
 
     private void BtnOptions_Click(object sender, RoutedEventArgs e)
     {
         if (_settingsWindow == null)
         {
-            _settingsWindow = new SettingsWindow(this);
+            _settingsWindow       = new SettingsWindow(this);
             _settingsWindow.Owner = this;
-            
-            // Re-snap to main window movements
-            this.LocationChanged += (s, ev) => { SnapSettingsWindow(); };
-            this.SizeChanged += (s, ev) => { SnapSettingsWindow(); };
+            this.LocationChanged += (_, _) => SnapSettingsWindow();
+            this.SizeChanged     += (_, _) => SnapSettingsWindow();
         }
 
         if (_settingsWindow.Visibility == Visibility.Visible)
-        {
             _settingsWindow.Hide();
-        }
         else
         {
             SnapSettingsWindow();
@@ -498,137 +570,354 @@ public partial class MainWindow : Window
         if (_settingsWindow != null)
         {
             _settingsWindow.Left = this.Left + this.ActualWidth + 2;
-            _settingsWindow.Top = this.Top;
+            _settingsWindow.Top  = this.Top;
         }
     }
 
-    public void LogCleanerAction(string message)
+    // Process checker
+    private void SetupProcessChecker()
     {
-        Dispatcher.Invoke(() => 
+        _robloxProcessTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _robloxProcessTimer.Tick += (_, _) =>
         {
-            _outputEditor.AppendText($"[Cleaner] {message}\n");
-            _outputEditor.ScrollToEnd();
-        });
+            if (!SirHurtAPI.IsRobloxRunning() &&
+                (SirHurtAPI.IsInjected || BtnInject.Content.ToString() == "INJECTED"))
+            {
+                SirHurtAPI.IsInjected = false;
+                BtnInject.Content     = "INJECT";
+                BtnInject.IsEnabled   = true;
+            }
+        };
+        _robloxProcessTimer.Start();
     }
+
+    // Log tailer
+    private void SetupLogTailer()
+    {
+        string bsLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Bootstrapper_log.txt");
+        if (File.Exists(bsLog))
+            _outputEditor.AppendText(File.ReadAllText(bsLog));
+
+        string logPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "sirhurt", "sirhui", "sirh_debug_log.dat");
+
+        if (File.Exists(logPath))
+        {
+            using var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            _lastLogPosition = fs.Length;
+        }
+        else
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            File.WriteAllText(logPath, "");
+        }
+
+        _sirHurtWatcher = new FileSystemWatcher
+        {
+            Path         = Path.GetDirectoryName(logPath)!,
+            Filter       = Path.GetFileName(logPath),
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
+        };
+        _sirHurtWatcher.Changed             += OnLogChanged;
+        _sirHurtWatcher.EnableRaisingEvents  = true;
+    }
+
+    private void OnLogChanged(object sender, FileSystemEventArgs e)
+    {
+        try
+        {
+            using var fs     = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(fs);
+            if (fs.Length < _lastLogPosition) _lastLogPosition = 0;
+            fs.Seek(_lastLogPosition, SeekOrigin.Begin);
+            string newContent = reader.ReadToEnd();
+            _lastLogPosition  = fs.Length;
+            if (!string.IsNullOrEmpty(newContent))
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    foreach (var line in newContent.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                        _outputEditor.AppendText($"[SirHurt] {line}\n");
+                    _outputEditor.ScrollToEnd();
+                });
+            }
+        }
+        catch { }
+    }
+
+    // Scripts tree
+    private void LoadScripts()
+    {
+        ScriptsTreeView.Items.Clear();
+
+        if (ScriptsTreeView.ContextMenu == null)
+        {
+            ScriptsTreeView.ContextMenu = new ContextMenu();
+            var refresh = new MenuItem { Header = "Refresh List" };
+            refresh.Click += (_, _) => LoadScripts();
+            ScriptsTreeView.ContextMenu.Items.Add(refresh);
+        }
+
+        if (Directory.Exists(SirHurtAPI.ScriptsDir))
+            PopulateTreeView(SirHurtAPI.ScriptsDir, ScriptsTreeView.Items);
+    }
+
+    private ContextMenu CreateScriptContextMenu(string path, bool isFile)
+    {
+        var menu = new ContextMenu();
+
+        var openItem = new MenuItem { Header = isFile ? "Open Script" : "Open Folder" };
+        openItem.Click += (_, e) =>
+        {
+            if (isFile) AddScriptTab(Path.GetFileName(path), File.ReadAllText(path));
+            else Process.Start("explorer.exe", path);
+            e.Handled = true;
+        };
+        menu.Items.Add(openItem);
+
+        if (isFile)
+        {
+            var execItem = new MenuItem { Header = "Execute File" };
+            execItem.Click += (_, e) =>
+            {
+                if (SirHurtAPI.IsInjected) SirHurtAPI.Execute(File.ReadAllText(path));
+                e.Handled = true;
+            };
+            menu.Items.Add(execItem);
+        }
+
+        var renameItem = new MenuItem { Header = isFile ? "Rename File" : "Rename Folder" };
+        renameItem.Click += (_, e) =>
+        {
+            var prompt = new PromptWindow("Rename",
+                $"Enter new name for {(isFile ? "file" : "folder")}:", Path.GetFileName(path))
+            { Owner = this };
+            if (prompt.ShowDialog() == true && !string.IsNullOrWhiteSpace(prompt.ResponseText))
+            {
+                try
+                {
+                    string newPath = Path.Combine(Path.GetDirectoryName(path)!, prompt.ResponseText);
+                    if (isFile) File.Move(path, newPath);
+                    else Directory.Move(path, newPath);
+                    LoadScripts();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to rename: " + ex.Message, "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            e.Handled = true;
+        };
+        menu.Items.Add(renameItem);
+
+        var deleteItem = new MenuItem { Header = isFile ? "Delete File" : "Delete Folder" };
+        deleteItem.Click += (_, e) =>
+        {
+            if (MessageBox.Show($"Permanently delete '{Path.GetFileName(path)}'?", "Confirm Delete",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    if (isFile) File.Delete(path);
+                    else Directory.Delete(path, true);
+                    LoadScripts();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to delete: " + ex.Message, "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            e.Handled = true;
+        };
+        menu.Items.Add(deleteItem);
+
+        menu.Items.Add(new Separator
+            { Background = (SolidColorBrush)new BrushConverter().ConvertFromString("#333333")! });
+        var refreshItem = new MenuItem { Header = "Refresh List" };
+        refreshItem.Click += (_, e) => { LoadScripts(); e.Handled = true; };
+        menu.Items.Add(refreshItem);
+
+        return menu;
+    }
+
+    private void PopulateTreeView(string dir, ItemCollection parent)
+    {
+        foreach (var d in Directory.GetDirectories(dir))
+        {
+            var info = new DirectoryInfo(d);
+            var item = new TreeViewItem { Header = info.Name, Tag = d, Foreground = Brushes.LightGray };
+            item.ContextMenu = CreateScriptContextMenu(d, false);
+            PopulateTreeView(d, item.Items);
+            parent.Add(item);
+        }
+        foreach (var f in Directory.GetFiles(dir))
+        {
+            var info = new FileInfo(f);
+            string ext = info.Extension.ToLower();
+            if (ext is ".lua" or ".luau" or ".txt")
+            {
+                var item = new TreeViewItem { Header = info.Name, Tag = f, Foreground = Brushes.LightGray };
+                item.ContextMenu = CreateScriptContextMenu(f, true);
+                parent.Add(item);
+            }
+        }
+    }
+
+    private void ScriptsTreeView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ScriptsTreeView.SelectedItem is TreeViewItem sel &&
+            sel.Tag is string path && File.Exists(path))
+            AddScriptTab(Path.GetFileName(path), File.ReadAllText(path));
+    }
+
+    // Fade animation
+    private void AnimateOpacity(double to)
+        => BeginAnimation(Window.OpacityProperty,
+               new DoubleAnimation(to, TimeSpan.FromMilliseconds(200)));
+
+    private void Window_Activated(object sender, EventArgs e)   => AnimateOpacity(1.0);
+    private void Window_Deactivated(object sender, EventArgs e)
+    {
+        if (SettingsManager.Config.TopMost && SettingsManager.Config.FadeEffects)
+            AnimateOpacity(0.4);
+    }
+
+    // Window closing
+    private async void Window_Closing(object sender, CancelEventArgs e)
+    {
+        if (_isClosing) return;   // second call: let it through
+
+        e.Cancel      = true;     // suspend the close
+        _isClosing    = true;
+
+        try { await SaveTabsAsync(); } catch { }
+
+        Application.Current.Shutdown();
+    }
+
+    // Window chrome
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    private void Close_Click(object sender, RoutedEventArgs e)    => Application.Current.Shutdown();
+
+    // Log helpers
+    public void LogCleanerAction(string message)
+        => Dispatcher.Invoke(() =>
+           {
+               _outputEditor.AppendText($"[Cleaner] {message}\n");
+               _outputEditor.ScrollToEnd();
+           });
 
     public void LogBootstrapperAction(string message, string tag = "Bootstrapper")
     {
-        try { File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Bootstrapper_log.txt"), $"[{tag}] {message}\n"); } catch {}
-        Dispatcher.Invoke(() => 
+        try { File.AppendAllText(
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Bootstrapper_log.txt"),
+            $"[{tag}] {message}\n"); }
+        catch { }
+        Dispatcher.Invoke(() =>
         {
             _outputEditor.AppendText($"[{tag}] {message}\n");
             _outputEditor.ScrollToEnd();
         });
     }
 
-    private void AnimateOpacity(double toValue)
-    {
-        DoubleAnimation anim = new DoubleAnimation(toValue, TimeSpan.FromMilliseconds(200));
-        this.BeginAnimation(Window.OpacityProperty, anim);
-    }
-
-    private void Window_Activated(object sender, EventArgs e)
-    {
-        AnimateOpacity(1.0);
-    }
-
-    private void Window_Deactivated(object sender, EventArgs e)
-    {
-        if (SettingsManager.Config.TopMost && SettingsManager.Config.FadeEffects)
-        {
-            AnimateOpacity(0.4);
-        }
-    }
-
-    private void Minimize_Click(object sender, RoutedEventArgs e)
-    {
-        this.WindowState = WindowState.Minimized;
-    }
-
-    private void Close_Click(object sender, RoutedEventArgs e)
-    {
-        Application.Current.Shutdown();
-    }
-
-    // --- Top Menu Context Routes ---
-
+    // Top menu
     private void TopMenu_LeftClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement element && element.ContextMenu != null)
+        if (sender is FrameworkElement fe && fe.ContextMenu != null)
         {
-            element.ContextMenu.PlacementTarget = element;
-            element.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-            element.ContextMenu.IsOpen = true;
+            fe.ContextMenu.PlacementTarget = fe;
+            fe.ContextMenu.Placement       =
+                System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            fe.ContextMenu.IsOpen = true;
         }
     }
 
     private void TopMenu_CreditsClick(object sender, MouseButtonEventArgs e)
-    {
-        var window = new CreditsWindow { Owner = this };
-        window.ShowDialog();
-    }
+        => new CreditsWindow { Owner = this }.ShowDialog();
 
     private void TopMenu_GamesClick(object sender, MouseButtonEventArgs e)
-    {
-        var window = new GamesWindow(this) { Owner = this };
-        window.Show();
-    }
+        => new GamesWindow(this) { Owner = this }.Show();
 
+    // Edit menu shortcuts
     private void BtnUndo_Click(object sender, RoutedEventArgs e)
     {
-        var editor = GetActiveEditor();
-        if (editor != null && !editor.IsReadOnly) editor.Undo();
+        var ed = GetActiveEditor();
+        if (ed != null && !ed.IsReadOnly) ed.Undo();
+        // Monaco: use Ctrl+Z natively
     }
 
     private void BtnRedo_Click(object sender, RoutedEventArgs e)
     {
-        var editor = GetActiveEditor();
-        if (editor != null && !editor.IsReadOnly) editor.Redo();
+        var ed = GetActiveEditor();
+        if (ed != null && !ed.IsReadOnly) ed.Redo();
+        // Monaco: use Ctrl+Y natively
     }
 
     private void BtnFindReplace_Click(object sender, RoutedEventArgs e)
     {
-        var window = new FindReplaceWindow(this) { Owner = this };
-        window.Show();
+        var ed = GetActiveEditor();
+        if (ed != null)
+        {
+            new FindReplaceWindow(this) { Owner = this }.Show();
+        }
+        else
+        {
+            // Monaco has built-in Ctrl+H; trigger it via JS
+            if (EditorTabs.SelectedItem is TabItem t)
+            {
+                var wv = FindWebView2(t);
+                _ = wv?.CoreWebView2.ExecuteScriptAsync(
+                    "editor.trigger('keyboard','actions.find',null)");
+            }
+        }
     }
 
+    // Hot-scripts
     private void BtnHotScript_InfiniteYield(object sender, RoutedEventArgs e)
     {
-        if (SirHurtAPI.IsInjected) SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()");
+        if (SirHurtAPI.IsInjected)
+            SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()");
     }
 
     private void BtnHotScript_Dex(object sender, RoutedEventArgs e)
     {
-        if (SirHurtAPI.IsInjected) SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()");
+        if (SirHurtAPI.IsInjected)
+            SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/main/dex.lua'))()");
     }
 
     private void BtnHotScript_OwlHub(object sender, RoutedEventArgs e)
     {
-        if (SirHurtAPI.IsInjected) SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/CriShoux/OwlHub/master/OwlHub.txt'))()");
+        if (SirHurtAPI.IsInjected)
+            SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/CriShoux/OwlHub/master/OwlHub.txt'))()");
     }
 
     private void BtnHotScript_UNC(object sender, RoutedEventArgs e)
     {
-        if (SirHurtAPI.IsInjected) SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/unified-naming-convention/NamingStandard/refs/heads/main/UNCCheckEnv.lua'))()");
+        if (SirHurtAPI.IsInjected)
+            SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/unified-naming-convention/NamingStandard/refs/heads/main/UNCCheckEnv.lua'))()");
     }
 
     private void BtnHotScript_SimpleSpy(object sender, RoutedEventArgs e)
     {
-        if (SirHurtAPI.IsInjected) SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/SimpleSpyV3/main.lua'))()");
+        if (SirHurtAPI.IsInjected)
+            SirHurtAPI.Execute("loadstring(game:HttpGet('https://raw.githubusercontent.com/infyiff/backup/refs/heads/main/SimpleSpyV3/main.lua'))()");
     }
 
     private void BtnHotScript_UnnamedESP(object sender, RoutedEventArgs e)
     {
-        if (SirHurtAPI.IsInjected) SirHurtAPI.Execute("pcall(function() loadstring(game:HttpGet('https://raw.githubusercontent.com/ic3w0lf22/Unnamed-ESP/master/UnnamedESP.lua'))() end)");
+        if (SirHurtAPI.IsInjected)
+            SirHurtAPI.Execute("pcall(function() loadstring(game:HttpGet('https://raw.githubusercontent.com/ic3w0lf22/Unnamed-ESP/master/UnnamedESP.lua'))() end)");
     }
 
+    // Others menu
     private void BtnOthers_Dashboard(object sender, RoutedEventArgs e)
-    {
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://sirhurt.net/login/dashboard.php/") { UseShellExecute = true });
-    }
+        => Process.Start(new ProcessStartInfo(
+               "https://sirhurt.net/login/dashboard.php/") { UseShellExecute = true });
 
     private void BtnOthers_Discord(object sender, RoutedEventArgs e)
-    {
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://discord.gg/sirhurt") { UseShellExecute = true });
-    }
+        => Process.Start(new ProcessStartInfo(
+               "https://discord.gg/sirhurt") { UseShellExecute = true });
 }

@@ -150,29 +150,33 @@
                     <CheckBox x:Name="ChkAutoAttach" Content="Auto Attach" Style="{StaticResource ToggleSwitch}" Margin="0,5" Checked="SettingChanged" Unchecked="SettingChanged"/>
                     <CheckBox x:Name="ChkTopMost" Content="Top Most" Style="{StaticResource ToggleSwitch}" Margin="0,5" Checked="SettingChanged" Unchecked="SettingChanged"/>
                     <CheckBox x:Name="ChkFadeEffects" Content="Opacity Fade-in/out" Style="{StaticResource ToggleSwitch}" Margin="0,5" Checked="SettingChanged" Unchecked="SettingChanged"/>
-                    <CheckBox x:Name="ChkAutoExecute" Content="Auto Execute" Style="{StaticResource ToggleSwitch}" Margin="0,5" Checked="SettingChanged" Unchecked="SettingChanged"/>
                     
                     <Border Height="1" Background="#2a2a2a" Margin="0,8,10,8" />
                     
-                    <CheckBox x:Name="ChkDiscordRPC" Content="Discord RPC" Style="{StaticResource ToggleSwitch}" Margin="0,5" Checked="SettingChanged" Unchecked="SettingChanged"/>
-                    <CheckBox x:Name="ChkFpsUnlocker" Content="FPS Unlocker" Style="{StaticResource ToggleSwitch}" Margin="0,5" Checked="SettingChanged" Unchecked="SettingChanged"/>
+                    <CheckBox x:Name="ChkMonacoEditor" Content="Switch to Monaco Editor" Style="{StaticResource ToggleSwitch}" Margin="0,5" Checked="SettingChanged" Unchecked="SettingChanged"/>
+                    <CheckBox Content="SirHurt Secure encryption" Style="{StaticResource ToggleSwitch}" Margin="0,5" IsEnabled="False" Opacity="0.4"/>
                     
                     <Border Height="1" Background="#2a2a2a" Margin="0,8,10,8" />
                     
-                    <Grid Margin="0,5,10,5">
+                    <Grid Margin="0,2,10,2">
+                        <TextBlock Text="Load Custom .d.luau" Foreground="#dddddd" VerticalAlignment="Center" />
+                        <Button Content="LOAD" HorizontalAlignment="Right" Click="BtnLoadDluau_Click" />
+                    </Grid>
+
+                    <Grid Margin="0,2,10,2">
                         <TextBlock Text="Run SirHurt Cleaner" Foreground="#dddddd" VerticalAlignment="Center" />
                         <Button Content="CLEAN" HorizontalAlignment="Right" Click="BtnCleaner_Click" />
                     </Grid>
 
-                    <Grid Margin="0,5,10,5">
+                    <Grid Margin="0,2,10,2">
                         <TextBlock Text="Install missing files" Foreground="#dddddd" VerticalAlignment="Center" />
                         <Button Content="INSTALL" HorizontalAlignment="Right" Click="BtnInstall_Click" />
                     </Grid>
 
-                    <Border Height="1" Background="#2a2a2a" Margin="0,8,10,8" />
+                    <Border Height="1" Background="#2a2a2a" Margin="0,5,10,5" />
                     
-                    <StackPanel Margin="0,5,10,0">
-                        <TextBlock x:Name="TxtAppVersion" Text="MossadStudio version: v1.0.0" Foreground="#555555" FontSize="10" />
+                    <StackPanel Margin="0,2,10,0">
+                        <TextBlock x:Name="TxtAppVersion" Text="MossadStudio version: v1.1.0" Foreground="#555555" FontSize="10" />
                         <TextBlock x:Name="TxtSirHurtVersion" Text="SirHurt version: V5.xxx" Foreground="#555555" FontSize="10" />
                         <TextBlock x:Name="TxtRobloxVersion" Text="Roblox Client version: version-xxxxx" Foreground="#555555" FontSize="10" />
                     </StackPanel>

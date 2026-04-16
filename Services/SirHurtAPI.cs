@@ -44,8 +44,37 @@ namespace MossadStudio.Services
         {
             try
             {
+                bool verbose = SettingsManager.Config.HiddenFlags.VerboseLogging;
+
+                // SkipSirHurtUpdateCheck: bypass API checks, use placeholder versions, nuke cache
+                if (SettingsManager.Config.HiddenFlags.SkipSirHurtUpdateCheck)
+                {
+                    logCallback("[Hidden Flag] SkipSirHurtUpdateCheck active — skipping SirHurt/Roblox version checks.");
+                    shExploitVersion = "N/A (skipped)";
+                    RobloxLiveVersion = "N/A (skipped)";
+
+                    // Delete version.txt so the next normal launch re-validates everything
+                    string versionFilePath = Path.Combine(CoreDir, "version.txt");
+                    if (File.Exists(versionFilePath))
+                    {
+                        try { File.Delete(versionFilePath); } catch { }
+                        logCallback("[Hidden Flag] version.txt deleted — cache will be rebuilt on next normal launch.");
+                    }
+
+                    // Still ensure core files exist (but don't re-download unless forced)
+                    if (!forceRedownload && File.Exists(CoreExePath))
+                    {
+                        logCallback("Core files present. Skipping download.");
+                        return true;
+                    }
+                    // Fall through to download if files are missing or forceRedownload
+                }
+
+                if (!SettingsManager.Config.HiddenFlags.SkipSirHurtUpdateCheck)
+                {
                 logCallback("Fetching LIVE Roblox version hash...");
                 string rbText = await client.GetStringAsync("https://clientsettingscdn.roblox.com/v2/client-version/WindowsPlayer");
+                if (verbose) logCallback($"[Verbose] Roblox version response: {rbText.Length} chars");
                 using JsonDocument rbDoc = JsonDocument.Parse(rbText);
                 string robloxLive = rbDoc.RootElement.GetProperty("clientVersionUpload").GetString();
                 RobloxLiveVersion = robloxLive ?? "Unknown";
@@ -53,6 +82,7 @@ namespace MossadStudio.Services
 
                 logCallback("Checking SirHurt API status...");
                 string shText = await client.GetStringAsync("https://sirhurt.net/status/fetch.php?exploit=SirHurt%20V5");
+                if (verbose) logCallback($"[Verbose] SirHurt status response: {shText.Length} chars");
                 using JsonDocument shDoc = JsonDocument.Parse(shText);
                 var shNode = shDoc.RootElement[0].GetProperty("SirHurt V5");
                 shExploitVersion = shNode.GetProperty("exploit_version").GetString();
@@ -69,7 +99,7 @@ namespace MossadStudio.Services
                 {
                     logCallback("SirHurt and Roblox are synced.");
                 }
-
+                }
                 string versionFile = Path.Combine(CoreDir, "version.txt");
                 string shdllPath = Path.Combine(SirHurtDatDir, "shdllname.dat");
                 
@@ -80,12 +110,14 @@ namespace MossadStudio.Services
                     if (!string.IsNullOrEmpty(readName) && File.Exists(Path.Combine(CoreDir, readName)))
                     {
                         targetDllName = readName;
+                        if (verbose) logCallback($"[Verbose] Resolved DLL name from shdllname.dat: {targetDllName}");
                     }
                 }
 
                 if (!forceRedownload && File.Exists(versionFile) && File.Exists(CoreExePath) && File.Exists(Path.Combine(CoreDir, targetDllName)))
                 {
                     string localVersion = (await File.ReadAllTextAsync(versionFile)).Trim();
+                    if (verbose) logCallback($"[Verbose] Local cached version: {localVersion} | Remote: {shExploitVersion}");
                     if (localVersion == shExploitVersion)
                     {
                         logCallback("SirHurt files match local cache. Skipping heavy download.");
@@ -95,7 +127,9 @@ namespace MossadStudio.Services
 
                 logCallback("Downloading SirHurt Core archive (this may take a moment)...");
                 string hexResponse = await client.GetStringAsync("https://sirhurt.net/asshurt/update/v5/ProtectFile.php?customversion=LIVE&file=sirhurt.zip");
+                if (verbose) logCallback($"[Verbose] Archive hex response: {hexResponse.Length} chars");
                 byte[] zipBytes = DecodeSirHurtZip(hexResponse);
+                if (verbose) logCallback($"[Verbose] Decoded ZIP size: {zipBytes.Length / 1024} KB");
 
                 string tempZipFile = Path.Combine(CoreDir, "sirhurt_archive.zip");
                 await File.WriteAllBytesAsync(tempZipFile, zipBytes);

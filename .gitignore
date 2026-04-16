@@ -1,26 +1,56 @@
-# .NET / Visual Studio
+# ── .NET / MSBuild ──────────────────────────────────────────────────────────
 [Bb]in/
 [Oo]bj/
 [Oo]ut/
+
+# ── Visual Studio / Rider ───────────────────────────────────────────────────
 .vs/
+.idea/
 *.user
 *.userprefs
 *.suo
 *.orig
 *.patch
+
+# ── Build artifacts ─────────────────────────────────────────────────────────
+*.pdb
+*.zip
+*.tmp
 *.log
 *.sqlite
 
-# Mossad Studio Environment Exceptions
-MossadSettings.json
-Bootstrapper_log.txt
-sirh_debug_log.dat
-update.bat
-*.zip
-*.tmp
+# ── Mossad Studio — runtime-generated folders (user data, never commit) ─────
 
-# Mac/OSX
+# WebView2 browser cache (created at runtime next to exe or in bin\WebView2\)
+*.WebView2/
+**/WebView2/
+
+# Persistent script tabs (user's open editors, recreated on launch)
+saved_tabs/
+**/saved_tabs/
+
+# User scripts / autoexecute / workspace — local only
+scripts/
+autoexe/
+workspace/
+
+# SirHurt runtime files — downloaded by bootstrapper, not source-controlled
+sirhurt.dll
+sirhurt.exe
+version.txt
+update.bat
+sirh_debug_log.dat
+Bootstrapper_log.txt
+
+# Config is user-specific; each install generates its own
+# bin/config.json  ← uncomment to exclude; keep commented to track defaults
+
+# Custom .d.luau definition files loaded by user at runtime
+*.d.luau
+
+# ── macOS ────────────────────────────────────────────────────────────────────
 .DS_Store
 
-#Rscripts outputs
+# ── Legacy / misc ────────────────────────────────────────────────────────────
 rscripts.json
+MossadSettings.json

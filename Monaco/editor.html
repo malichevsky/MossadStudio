@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; background: #222222; overflow: hidden; }
+        #container { width: 100%; height: 100%; }
+        #loading {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #555; font-family: 'Segoe UI', sans-serif; font-size: 13px;
+            pointer-events: none;
+        }
+    </style>
+    <link rel="stylesheet" href="vs/editor/editor.main.css">
+</head>
+<body>
+    <div id="loading">Initializing editor…</div>
+    <div id="container"></div>
+
+    <script src="vs/loader.js"></script>
+    <script>
+    // Disable Monaco workers — we only need Monarch tokenising, no language servers.
+    window.MonacoEnvironment = {
+        getWorker: function () {
+            const blob = new Blob(['self.onmessage=function(){};'], { type: 'application/javascript' });
+            return new Worker(URL.createObjectURL(blob));
+        }
+    };
+
+    require.config({
+        paths: { 'vs': './vs' },
+        'vs/nls': { availableLanguages: {} }   // Force bundled English strings, no external NLS files.
+    });
+
+    require(['vs/editor/editor.main'], function () {
+        var monaco = window.monaco;
+
+        // Luau keyword / global lists
+        var KEYWORDS = [
+            'and','break','do','else','elseif','end','false','for',
+            'function','if','in','local','nil','not','or','repeat',
+            'return','then','true','until','while','continue'
+        ];
+
+        var GLOBALS = [
+            'game','workspace','script','math','string','table','coroutine',
+            'task','debug','os','io','package','Drawing','crypt','_G','_VERSION',
+            'tostring','tonumber','type','print','warn','error','require',
+            'pcall','xpcall','assert','next','pairs','ipairs','loadstring',
+            'unpack','rawequal','collectgarbage','getmetatable','setmetatable',
+            'module','rawset','newproxy','select','gcinfo','rawget','dofile',
+            'load','loadfile','setfenv','getfenv',
+            'getgenv','getrenv','getsenv','getreg','getrawmetatable',
+            'setrawmetatable','setreadonly','isreadonly','cloneref',
+            'compareinstances','checkcaller','clonefunction','getcallingscript',
+            'hookfunction','isfunctionhooked','restorefunction','iscclosure',
+            'islclosure','isexecutorclosure','newcclosure',
+            'sirhurt_run_secure','sirhurt_create_secure_function','sirhurt_hub_scrun',
+            'cleardrawcache','getrenderproperty','isrenderobj','setrenderproperty',
+            'readfile','listfiles','writefile','makefolder','appendfile',
+            'isfile','isfolder','delfile','delfolder',
+            'mouse1click','mouse1press','mouse1release','mouse2click','mouse2press',
+            'mouse2release','mousemoveabs','mousemoverel','mousescroll',
+            'fireclickdetector','fireproximityprompt','firetouchinterest','firesignal',
+            'getcallbackvalue','getconnections','getcustomasset','gethiddenproperty',
+            'gethui','getinstances','getnilinstances','isscriptable',
+            'sethiddenproperty','setscriptable','hookmetamethod','getnamecallmethod',
+            'identifyexecutor','lz4compress','lz4decompress','messagebox',
+            'queue_on_teleport','request','setclipboard','setfpscap','gethwid',
+            'getgc','getloadedmodules','getrunningscripts','getscriptbytecode',
+            'getscriptclosure','getscripthash','getscripts','getthreadidentity',
+            'setthreadidentity','run_on_actor','getactors','getdeletedactors',
+            'emulateWave','emulateJJSploit','emulateSolara'
+        ];
+
+        // Monarch tokeniser
+        monaco.languages.register({ id: 'luau' });
+
+        monaco.languages.setMonarchTokensProvider('luau', {
+            keywords: KEYWORDS,
+            globals:  GLOBALS,
+            tokenizer: {
+                root: [
+                    // Long comment  --[[ ... ]]
+                    [/--\[=*\[/, { token: 'comment', next: '@longcomment' }],
+                    // Short comment
+                    [/--.*$/, 'comment'],
+                    // Long string  [[ ... ]]
+                    [/\[=*\[/, { token: 'string', next: '@longstring' }],
+                    // Double-quoted string
+                    [/"/, { token: 'string', next: '@string_dq' }],
+                    // Single-quoted string
+                    [/'/, { token: 'string', next: '@string_sq' }],
+                    // Number — hex
+                    [/0[xX][0-9a-fA-F]+/, 'number'],
+                    // Number — float / int
+                    [/\d+(\.\d+)?([eE][+-]?\d+)?/, 'number'],
+                    [/\.\d+([eE][+-]?\d+)?/, 'number'],
+                    // Identifier followed by '(' → potential method call
+                    [/[a-zA-Z_]\w*(?=[ \t]*\()/, {
+                        cases: {
+                            '@keywords': 'keyword',
+                            '@globals':  'environment',
+                            '@default':  'method'
+                        }
+                    }],
+                    // Plain identifier
+                    [/[a-zA-Z_]\w*/, {
+                        cases: {
+                            '@keywords': 'keyword',
+                            '@globals':  'environment',
+                            '@default':  'identifier'
+                        }
+                    }],
+                    // Delimiters / operators
+                    [/[{}()\[\]]/, 'delimiter'],
+                    [/[+\-*\/%^#&|~<>=!;:,.]/, 'delimiter'],
+                ],
+                longcomment: [
+                    [/\]=*\]/, { token: 'comment', next: '@pop' }],
+                    [/[\s\S]/, 'comment']
+                ],
+                longstring: [
+                    [/\]=*\]/, { token: 'string', next: '@pop' }],
+                    [/[\s\S]/, 'string']
+                ],
+                string_dq: [
+                    [/\\./, 'string.escape'],
+                    [/"/, { token: 'string', next: '@pop' }],
+                    [/[^"\\]+/, 'string']
+                ],
+                string_sq: [
+                    [/\\./, 'string.escape'],
+                    [/'/, { token: 'string', next: '@pop' }],
+                    [/[^'\\]+/, 'string']
+                ]
+            }
+        });
+
+        monaco.languages.setLanguageConfiguration('luau', {
+            comments: { lineComment: '--', blockComment: ['--[[', ']]'] },
+            brackets: [['{','}'],['[',']'],['(',')']],
+            autoClosingPairs: [
+                { open:'{', close:'}' },{ open:'[', close:']' },{ open:'(', close:')' },
+                { open:'"', close:'"', notIn:['string'] },
+                { open:"'", close:"'", notIn:['string'] }
+            ],
+            surroundingPairs: [
+                { open:'{', close:'}' },{ open:'[', close:']' },{ open:'(', close:')' },
+                { open:'"', close:'"' },{ open:"'", close:"'" }
+            ],
+            indentationRules: {
+                increaseIndentPattern: /^\s*(function|then|do|repeat|else|elseif)\b/,
+                decreaseIndentPattern: /^\s*(end|until|else|elseif)\b/
+            }
+        });
+
+        // Theme — exact same colours as Luau.xshd
+        monaco.editor.defineTheme('luau-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [
+                { token: 'comment',       foreground: '6A9955' },
+                { token: 'string',        foreground: 'CE9178' },
+                { token: 'string.escape', foreground: 'CE9178' },
+                { token: 'number',        foreground: 'B5CEA8' },
+                { token: 'keyword',       foreground: '569CD6', fontStyle: 'bold' },
+                { token: 'method',        foreground: 'DCDCAA' },
+                { token: 'environment',   foreground: '4EC9B0' },
+                { token: 'identifier',    foreground: 'D4D4D4' },
+                { token: 'delimiter',     foreground: 'D4D4D4' },
+                { token: 'typedecl',      foreground: '9CDCFE' },  // .d.luau injected identifiers
+                { token: '',              foreground: 'D4D4D4' }
+            ],
+            colors: {
+                'editor.background':                  '#222222',
+                'editor.foreground':                  '#D4D4D4',
+                'editor.lineHighlightBackground':     '#2A2A2A',
+                'editorLineNumber.foreground':        '#888888',
+                'editorLineNumber.activeForeground':  '#AAAAAA',
+                'editor.selectionBackground':         '#264F7888',
+                'editor.inactiveSelectionBackground': '#3A3D4188',
+                'editorCursor.foreground':            '#AEAFAD',
+                'scrollbarSlider.background':         '#3A3A3A88',
+                'scrollbarSlider.hoverBackground':    '#4A4A4A88',
+                'editorWidget.background':            '#1E1E1E',
+                'editorWidget.border':                '#333333',
+                'input.background':                   '#1E1E1E',
+                'input.foreground':                   '#D4D4D4',
+                'list.highlightForeground':           '#3ea0f0',
+                'editorSuggestWidget.background':     '#1E1E1E',
+                'editorSuggestWidget.border':         '#333333',
+                'editorSuggestWidget.selectedBackground': '#2A2A2A'
+            }
+        });
+
+        // Built-in completions (Luau globals)
+        var DEFAULT_COMPLETIONS = GLOBALS.map(function (g) {
+            return {
+                label: g,
+                kind: monaco.languages.CompletionItemKind.Function,
+                insertText: g,
+                detail: "global"
+            };
+        });
+
+        // Advanced IntelliSense (Schema-driven)
+        var _currentSchema = { globals: {}, types: {} };
+        var _completionProvider = null;
+        var _hoverProvider = null;
+
+        function registerProviders() {
+            if (_completionProvider) _completionProvider.dispose();
+            if (_hoverProvider) _hoverProvider.dispose();
+
+            _completionProvider = monaco.languages.registerCompletionItemProvider('luau', {
+                triggerCharacters: ['.', ':'],
+                provideCompletionItems: function (model, position) {
+                    var linePrefix = model.getLineContent(position.lineNumber).substring(0, position.column - 1);
+                    
+                    // 1. Member access (e.g. game. or game:)
+                    var match = linePrefix.match(/([a-zA-Z_]\w*)([. :])$/);
+                    if (match) {
+                        var varName = match[1];
+                        var typeName = _currentSchema.globals[varName] || varName;
+                        
+                        var typeDef = _currentSchema.types[typeName];
+                        if (typeDef && typeDef.members) {
+                            return {
+                                suggestions: typeDef.members.map(function (m) {
+                                    return {
+                                        label:         m.label,
+                                        kind:          m.kind,
+                                        insertText:    m.label,
+                                        detail:        m.detail || (typeName + "." + m.label),
+                                        documentation: m.documentation || ""
+                                    };
+                                })
+                            };
+                        }
+                        return { suggestions: [] };
+                    }
+
+                    // 2. Global scope
+                    var suggestions = DEFAULT_COMPLETIONS.concat(
+                        Object.keys(_currentSchema.globals).map(function (g) {
+                            return {
+                                label: g,
+                                kind: monaco.languages.CompletionItemKind.Variable,
+                                insertText: g,
+                                detail: "global: " + _currentSchema.globals[g]
+                            };
+                        })
+                    ).concat(
+                        Object.keys(_currentSchema.types).map(function (t) {
+                            var kind = _currentSchema.types[t].kind;
+                            var mKind = monaco.languages.CompletionItemKind.Class;
+                            if (kind === 'module') mKind = monaco.languages.CompletionItemKind.Module;
+                            else if (kind === 'function') mKind = monaco.languages.CompletionItemKind.Function;
+
+                            return {
+                                label: t,
+                                kind: mKind,
+                                insertText: t,
+                                detail: kind
+                            };
+                        })
+                    );
+
+                    return { suggestions: suggestions };
+                }
+            });
+
+            _hoverProvider = monaco.languages.registerHoverProvider('luau', {
+                provideHover: function (model, position) {
+                    var word = model.getWordAtPosition(position);
+                    if (!word) return;
+
+                    var typeName = _currentSchema.globals[word.word] || word.word;
+                    var typeDef = _currentSchema.types[typeName];
+
+                    if (typeDef) {
+                        return {
+                            contents: [
+                                { value: '**' + typeName + '** (' + typeDef.kind + ')' },
+                                { value: (typeDef.members ? typeDef.members.length : 0) + ' members declared.' }
+                            ]
+                        };
+                    }
+                }
+            });
+        }
+
+        registerProviders();
+
+        // Create editor
+        var editor = monaco.editor.create(document.getElementById('container'), {
+            value:                   '',
+            language:                'luau',
+            theme:                   'luau-dark',
+            fontFamily:              'Consolas, "Courier New", monospace',
+            fontSize:                13,
+            lineNumbers:             'on',
+            lineNumbersMinChars:     3,
+            minimap:                 { enabled: false },
+            scrollBeyondLastLine:    false,
+            automaticLayout:         true,
+            wordWrap:                'off',
+            renderWhitespace:        'none',
+            cursorBlinking:          'smooth',
+            cursorSmoothCaretAnimation: 'on',
+            smoothScrolling:         true,
+            contextmenu:             true,
+            folding:                 true,
+            bracketPairColorization: { enabled: false },
+            guides:                  { bracketPairs: false, indentation: false },
+            overviewRulerBorder:     false,
+            hideCursorInOverviewRuler: true,
+            overviewRulerLanes:      0,
+            padding:                 { top: 4 },
+            scrollbar: {
+                vertical:             'auto',
+                horizontal:           'auto',
+                verticalScrollbarSize: 8,
+                horizontalScrollbarSize: 8
+            }
+        });
+
+        window.addEventListener('resize', function () { editor.layout(); });
+
+        // Public JS API
+        window.monacoAPI = {
+            getText: function () {
+                return editor.getValue();
+            },
+            setText: function (text) {
+                editor.setValue(text != null ? text : '');
+            },
+            clearText: function () {
+                editor.setValue('');
+            },
+            addDluauCompletions: function (schema) {
+                _currentSchema = schema || { globals: {}, types: {} };
+                // Providers use _currentSchema directly, no need to reregister
+            },
+            resetCompletions: function () {
+                _currentSchema = { globals: {}, types: {} };
+            },
+            focus: function () {
+                editor.focus();
+            }
+        };
+
+        // Signal C# that Monaco is ready
+        document.getElementById('loading').style.display = 'none';
+        if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage('monacoReady');
+        }
+    });
+    </script>
+</body>
+</html>

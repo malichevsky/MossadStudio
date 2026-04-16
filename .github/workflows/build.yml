@@ -24,9 +24,50 @@ jobs:
         run: |
           dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
 
+      # What we ship in the release zip:
+      #   MossadStudio.exe          ← the app (single file, all .NET inside)
+      #   bin/Monaco/**             ← Monaco editor files (required at runtime)
+      #
+      # What we deliberately DO NOT ship:
+      #   bin/config.json           ← user settings (preserved across updates)
+      #   bin/saved_tabs/           ← user scripts (preserved across updates)
+      #   bin/WebView2/             ← browser cache (auto-generated)
+      #   autoexe/ scripts/ workspace/ ← user data living in install root
+      #
+      # Update flow for users: extract zip over existing folder.
+      #   exe        → overwritten  (new version)
+      #   bin/Monaco → overwritten  (new editor)
+      #   everything else → untouched (user data safe)
+      #
+      # config.json migration is handled by the app itself on first launch after
+      # an update: it reads the old config, writes it back, which adds any new
+      # fields with their default values without changing existing settings.
+      - name: Package Release Archive
+        shell: pwsh
+        run: |
+          $publish = "bin/Release/net10.0-windows/win-x64/publish"
+          $zip     = "MossadStudio-${{ github.ref_name }}.zip"
+
+          # Stage everything under a single MossadStudio\ root inside the zip
+          $stage = "stage/MossadStudio"
+          New-Item -ItemType Directory -Force $stage | Out-Null
+
+          # Copy exe
+          Copy-Item "$publish/MossadStudio.exe" "$stage/"
+
+          # Copy ONLY the Monaco sub-folder (not the entire bin\)
+          $monacoSrc = "$publish/bin/Monaco"
+          if (Test-Path $monacoSrc) {
+            Copy-Item -Recurse $monacoSrc "$stage/bin/Monaco"
+          }
+
+          Compress-Archive -Path "stage/MossadStudio" -DestinationPath $zip
+
+          echo "RELEASE_ZIP=$zip" >> $env:GITHUB_ENV
+
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: bin/Release/net10.0-windows/win-x64/publish/MossadStudio.exe
+          files: ${{ env.RELEASE_ZIP }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
