@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -31,26 +31,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Luau.xshd" />
-    <Content Include="Monaco\editor.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <Link>bin\Monaco\editor.html</Link>
-    </Content>
-    <Content Include="Monaco\vs\loader.js">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <Link>bin\Monaco\vs\loader.js</Link>
-    </Content>
-    <Content Include="Monaco\vs\editor\editor.main.js">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <Link>bin\Monaco\vs\editor\editor.main.js</Link>
-    </Content>
-    <Content Include="Monaco\vs\editor\editor.main.css">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <Link>bin\Monaco\vs\editor\editor.main.css</Link>
-    </Content>
-    <Content Include="Monaco\vs\base\browser\ui\codicons\codicon\codicon.ttf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <Link>bin\Monaco\vs\base\browser\ui\codicons\codicon\codicon.ttf</Link>
-    </Content>
+    <EmbeddedResource Include="Monaco\**\*" />
     <Resource Include="icon.ico" />
   </ItemGroup>
 </Project>

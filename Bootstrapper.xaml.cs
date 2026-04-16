@@ -51,8 +51,10 @@ namespace MossadStudio
                 using JsonDocument doc = JsonDocument.Parse(json);
                 string? tagName = doc.RootElement.GetProperty("tag_name").GetString();
                 
-                Version appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 1, 0);
+                Version appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 1, 1);
                 string currentTag = $"v{appVersion.ToString(3)}";
+                
+                Log($"Current Version: {currentTag} | Latest Release: {tagName}");
                 
                 if (!string.IsNullOrEmpty(tagName) && tagName != currentTag)
                 {
@@ -94,6 +96,12 @@ del ""%~f0""
                             Process.Start(psi);
                             Environment.Exit(0);
                             return false;
+                        }
+                        else
+                        {
+                            Log("ERROR: Update asset 'MossadStudio.exe' not found on GitHub.");
+                            Log("Please ensure the maintainer has uploaded the executable asset.");
+                            await Task.Delay(3000);
                         }
                     }
                 }

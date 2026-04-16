@@ -24,41 +24,27 @@ jobs:
         run: |
           dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true
 
-      # What we ship in the release zip:
-      #   MossadStudio.exe          ← the app (single file, all .NET inside)
-      #   bin/Monaco/**             ← Monaco editor files (required at runtime)
+      # Architecture: "Truly Single File"
+      #   MossadStudio.exe is now a self-sustaining binary. 
+      #   - Monaco editor is bundled as an Embedded Resource.
+      #   - On first launch, the app auto-extracts Monaco to bin/Monaco/.
+      #   - The Bootstrapper handles SirHurt DLL downloads as needed.
       #
-      # What we deliberately DO NOT ship:
-      #   bin/config.json           ← user settings (preserved across updates)
-      #   bin/saved_tabs/           ← user scripts (preserved across updates)
-      #   bin/WebView2/             ← browser cache (auto-generated)
-      #   autoexe/ scripts/ workspace/ ← user data living in install root
-      #
-      # Update flow for users: extract zip over existing folder.
-      #   exe        → overwritten  (new version)
-      #   bin/Monaco → overwritten  (new editor)
-      #   everything else → untouched (user data safe)
-      #
-      # config.json migration is handled by the app itself on first launch after
-      # an update: it reads the old config, writes it back, which adds any new
-      # fields with their default values without changing existing settings.
+      # This allows the auto-updater to safely swap just the EXE.
       - name: Package Release Archive
         shell: pwsh
         run: |
           $publish = "bin/Release/net10.0-windows/win-x64/publish"
           $zip     = "MossadStudio-${{ github.ref_name }}.zip"
 
-          # Stage everything under a single MossadStudio\ root inside the zip
+          # Stage the single EXE into the zip
           $stage = "stage/MossadStudio"
           New-Item -ItemType Directory -Force $stage | Out-Null
-
-          # Copy exe
           Copy-Item "$publish/MossadStudio.exe" "$stage/"
-
-          # Copy ONLY the Monaco sub-folder (not the entire bin\)
-          $monacoSrc = "$publish/bin/Monaco"
-          if (Test-Path $monacoSrc) {
-            Copy-Item -Recurse $monacoSrc "$stage/bin/Monaco"
+          
+          # We also include the LICENSE file in the release package
+          if (Test-Path "LICENSE") {
+            Copy-Item "LICENSE" "$stage/"
           }
 
           Compress-Archive -Path "stage/MossadStudio" -DestinationPath $zip
@@ -68,6 +54,8 @@ jobs:
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.RELEASE_ZIP }}
+          files: |
+            ${{ env.RELEASE_ZIP }}
+            bin/Release/net10.0-windows/win-x64/publish/MossadStudio.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
