@@ -6,17 +6,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>1.1.1</Version>
-    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <Version>1.1.2</Version>
+    <AssemblyVersion>1.1.2.0</AssemblyVersion>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
   </PropertyGroup>
 
-  <!-- Release / publish: strip noise from the output folder.
-       PublishDocumentationFiles=false  → omits Microsoft.Web.WebView2.*.xml (IntelliSense only, not needed at runtime)
-       DebugType=none + DebugSymbols=false → omits the .pdb debug symbols file
+  <!-- Release / publish: strip noise from the output folder. PublishDocumentationFiles=false  → omits Microsoft.Web.WebView2.*.xml (IntelliSense only, not needed at runtime) DebugType=none + DebugSymbols=false → omits the .pdb debug symbols file
        These settings only apply when running 'dotnet publish -c Release'. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishDocumentationFiles>false</PublishDocumentationFiles>

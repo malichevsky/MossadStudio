@@ -59,7 +59,7 @@ namespace MossadStudio
                 using JsonDocument doc = JsonDocument.Parse(json);
                 string? tagName = doc.RootElement.GetProperty("tag_name").GetString();
                 
-                Version appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 1, 1);
+                Version appVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 1, 2);
                 string currentTag = $"v{appVersion.ToString(3)}";
                 
                 Log($"Current Version: {currentTag} | Latest Release: {tagName}");

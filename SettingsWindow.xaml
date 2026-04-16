@@ -176,7 +176,7 @@
                     <Border Height="1" Background="#2a2a2a" Margin="0,5,10,5" />
                     
                     <StackPanel Margin="0,2,10,0">
-                        <TextBlock x:Name="TxtAppVersion" Text="MossadStudio version: v1.1.1" Foreground="#555555" FontSize="10" />
+                        <TextBlock x:Name="TxtAppVersion" Text="MossadStudio version: v1.1.2" Foreground="#555555" FontSize="10" />
                         <TextBlock x:Name="TxtSirHurtVersion" Text="SirHurt version: V5.xxx" Foreground="#555555" FontSize="10" />
                         <TextBlock x:Name="TxtRobloxVersion" Text="Roblox Client version: version-xxxxx" Foreground="#555555" FontSize="10" />
                     </StackPanel>
